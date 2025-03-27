@@ -29,7 +29,7 @@ export function NavBar() {
             <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary">
               <div className="h-3 w-3 rounded-full bg-primary-foreground" />
             </div>
-            <span className="hidden font-bold sm:inline-block">Status Haven</span>
+            <span className="hidden font-bold sm:inline-block">Bot Search_AT Status</span>
           </Link>
           
           <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
