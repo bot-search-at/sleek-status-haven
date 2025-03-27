@@ -181,7 +181,7 @@ export default function Index() {
             {getStatusIcon()}
             <span className="font-medium">{getStatusMessage()}</span>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">My Status Page</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Bot Search_AT Status Page</h1>
           <p className="mt-2 text-muted-foreground">
             Live status monitoring for all my services
           </p>
