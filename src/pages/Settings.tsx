@@ -12,7 +12,10 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/context/AuthContext";
-import { User, Save, BellRing, Mail, Shield, Paintbrush } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { User, Save, BellRing, Mail, Shield, Paintbrush, Upload, Camera } from "lucide-react";
 
 // Define the form schema for user profile
 const profileFormSchema = z.object({
@@ -20,6 +23,8 @@ const profileFormSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
   company: z.string().optional(),
   job_title: z.string().optional(),
+  bio: z.string().max(160).optional(),
+  website: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
 });
 
 // Define the form schema for appearance
@@ -31,6 +36,9 @@ const appearanceFormSchema = z.object({
 const notificationsFormSchema = z.object({
   email_notifications: z.boolean().default(true),
   push_notifications: z.boolean().default(true),
+  incident_alerts: z.boolean().default(true),
+  maintenance_alerts: z.boolean().default(true),
+  status_updates: z.boolean().default(true),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -41,6 +49,18 @@ export default function Settings() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(user?.user_metadata?.avatar_url || null);
+
+  // Get initials for avatar fallback
+  const getInitials = () => {
+    const name = user?.user_metadata?.full_name || user?.email || "";
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .substring(0, 2);
+  };
 
   // Initialize form with default values
   const profileForm = useForm<ProfileFormValues>({
@@ -50,6 +70,20 @@ export default function Settings() {
       email: user?.email || "",
       company: user?.user_metadata?.company || "",
       job_title: user?.user_metadata?.job_title || "",
+      bio: user?.user_metadata?.bio || "",
+      website: user?.user_metadata?.website || "",
+    },
+  });
+
+  // Initialize notifications form
+  const notificationsForm = useForm<NotificationsFormValues>({
+    resolver: zodResolver(notificationsFormSchema),
+    defaultValues: {
+      email_notifications: true,
+      push_notifications: true,
+      incident_alerts: true,
+      maintenance_alerts: true,
+      status_updates: true,
     },
   });
 
@@ -63,7 +97,7 @@ export default function Settings() {
       
       toast({
         title: "Profile updated",
-        description: "Your profile information has been updated.",
+        description: "Your profile information has been updated successfully.",
       });
     } catch (error) {
       console.error("Error updating profile:", error);
@@ -75,6 +109,23 @@ export default function Settings() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Mock function to handle avatar upload
+  const handleAvatarUpload = () => {
+    toast({
+      title: "Avatar upload",
+      description: "This feature is not implemented yet.",
+    });
+  };
+
+  // Form submission handler for notifications form
+  const onNotificationsSubmit = async (data: NotificationsFormValues) => {
+    console.log("Notification settings:", data);
+    toast({
+      title: "Notification settings saved",
+      description: "Your notification preferences have been updated.",
+    });
   };
 
   return (
@@ -116,81 +167,149 @@ export default function Settings() {
                 </CardDescription>
               </CardHeader>
               <Separator />
+
               <CardContent className="pt-6">
-                <Form {...profileForm}>
-                  <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-6">
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <FormField
-                        control={profileForm.control}
-                        name="name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Full Name</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Your name" {...field} />
-                            </FormControl>
-                            <FormDescription>
-                              This is the name that will be displayed on your profile.
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={profileForm.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Email</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Your email" {...field} disabled />
-                            </FormControl>
-                            <FormDescription>
-                              Your email address is used for notifications and login.
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                <div className="flex flex-col gap-8 md:flex-row">
+                  <div className="flex flex-col items-center space-y-3">
+                    <Avatar className="h-24 w-24">
+                      <AvatarImage src={avatarUrl || ""} alt="Profile" />
+                      <AvatarFallback className="text-xl">{getInitials()}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" size="sm" onClick={handleAvatarUpload} className="flex items-center gap-1">
+                        <Camera className="h-4 w-4" />
+                        <span>Change</span>
+                      </Button>
+                      {avatarUrl && (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => setAvatarUrl(null)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          Remove
+                        </Button>
+                      )}
                     </div>
-                    
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <FormField
-                        control={profileForm.control}
-                        name="company"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Company</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Your company" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={profileForm.control}
-                        name="job_title"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Job Title</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Your job title" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    
-                    <Button type="submit" disabled={isLoading} className="flex items-center gap-2">
-                      <Save className="h-4 w-4" />
-                      {isLoading ? "Saving..." : "Save changes"}
-                    </Button>
-                  </form>
-                </Form>
+                  </div>
+
+                  <div className="flex-1">
+                    <Form {...profileForm}>
+                      <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-6">
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <FormField
+                            control={profileForm.control}
+                            name="name"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Full Name</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Your name" {...field} />
+                                </FormControl>
+                                <FormDescription>
+                                  This is the name that will be displayed on your profile.
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={profileForm.control}
+                            name="email"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Email</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Your email" {...field} disabled />
+                                </FormControl>
+                                <FormDescription>
+                                  Your email address is used for notifications and login.
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <FormField
+                            control={profileForm.control}
+                            name="company"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Company</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Your company" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={profileForm.control}
+                            name="job_title"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Job Title</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Your job title" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <div className="grid gap-4">
+                          <FormField
+                            control={profileForm.control}
+                            name="bio"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Bio</FormLabel>
+                                <FormControl>
+                                  <Textarea 
+                                    placeholder="Tell us a little about yourself" 
+                                    className="resize-none" 
+                                    rows={3} 
+                                    {...field} 
+                                  />
+                                </FormControl>
+                                <FormDescription>
+                                  Brief description for your profile. Max 160 characters.
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <div className="grid gap-4">
+                          <FormField
+                            control={profileForm.control}
+                            name="website"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Website</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="https://your-website.com" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        
+                        <Button type="submit" disabled={isLoading} className="flex items-center gap-2">
+                          <Save className="h-4 w-4" />
+                          {isLoading ? "Saving..." : "Save changes"}
+                        </Button>
+                      </form>
+                    </Form>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -200,42 +319,137 @@ export default function Settings() {
               <CardHeader>
                 <CardTitle>Notifications</CardTitle>
                 <CardDescription>
-                  Manage how you receive notifications.
+                  Choose how and when you want to be notified.
                 </CardDescription>
               </CardHeader>
               <Separator />
               <CardContent className="pt-6">
-                <p className="text-muted-foreground mb-4">
-                  Configure your notification preferences.
-                </p>
-                
-                <div className="grid gap-6">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <h3 className="font-medium">Email Notifications</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Receive email notifications about incidents and updates.
-                      </p>
+                <Form {...notificationsForm}>
+                  <form onSubmit={notificationsForm.handleSubmit(onNotificationsSubmit)} className="space-y-8">
+                    <div className="space-y-6">
+                      <div className="flex flex-col space-y-4">
+                        <h3 className="font-medium text-lg">Notification Channels</h3>
+                        <div className="space-y-4">
+                          <FormField
+                            control={notificationsForm.control}
+                            name="email_notifications"
+                            render={({ field }) => (
+                              <div className="flex justify-between items-center">
+                                <div className="space-y-0.5">
+                                  <FormLabel className="text-base">Email Notifications</FormLabel>
+                                  <FormDescription>
+                                    Receive notifications via email
+                                  </FormDescription>
+                                </div>
+                                <FormControl>
+                                  <Switch
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                  />
+                                </FormControl>
+                              </div>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={notificationsForm.control}
+                            name="push_notifications"
+                            render={({ field }) => (
+                              <div className="flex justify-between items-center">
+                                <div className="space-y-0.5">
+                                  <FormLabel className="text-base">Browser Notifications</FormLabel>
+                                  <FormDescription>
+                                    Receive notifications in your browser
+                                  </FormDescription>
+                                </div>
+                                <FormControl>
+                                  <Switch
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                  />
+                                </FormControl>
+                              </div>
+                            )}
+                          />
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      <div className="flex flex-col space-y-4">
+                        <h3 className="font-medium text-lg">Notification Types</h3>
+                        <div className="space-y-4">
+                          <FormField
+                            control={notificationsForm.control}
+                            name="incident_alerts"
+                            render={({ field }) => (
+                              <div className="flex justify-between items-center">
+                                <div className="space-y-0.5">
+                                  <FormLabel className="text-base">Incident Alerts</FormLabel>
+                                  <FormDescription>
+                                    Get notified about new incidents
+                                  </FormDescription>
+                                </div>
+                                <FormControl>
+                                  <Switch
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                  />
+                                </FormControl>
+                              </div>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={notificationsForm.control}
+                            name="maintenance_alerts"
+                            render={({ field }) => (
+                              <div className="flex justify-between items-center">
+                                <div className="space-y-0.5">
+                                  <FormLabel className="text-base">Maintenance Alerts</FormLabel>
+                                  <FormDescription>
+                                    Get notified about scheduled maintenance
+                                  </FormDescription>
+                                </div>
+                                <FormControl>
+                                  <Switch
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                  />
+                                </FormControl>
+                              </div>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={notificationsForm.control}
+                            name="status_updates"
+                            render={({ field }) => (
+                              <div className="flex justify-between items-center">
+                                <div className="space-y-0.5">
+                                  <FormLabel className="text-base">Status Updates</FormLabel>
+                                  <FormDescription>
+                                    Get notified about service status changes
+                                  </FormDescription>
+                                </div>
+                                <FormControl>
+                                  <Switch
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                  />
+                                </FormControl>
+                              </div>
+                            )}
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <Button variant="outline" size="sm">
-                      Configure
+                    <Button type="submit" className="flex items-center gap-2">
+                      <Save className="h-4 w-4" />
+                      Save preferences
                     </Button>
-                  </div>
-                  
-                  <Separator />
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <h3 className="font-medium">Browser Notifications</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Get notifications directly in your browser.
-                      </p>
-                    </div>
-                    <Button variant="outline" size="sm">
-                      Configure
-                    </Button>
-                  </div>
-                </div>
+                  </form>
+                </Form>
               </CardContent>
             </Card>
           </TabsContent>
@@ -255,30 +469,42 @@ export default function Settings() {
                 </p>
                 
                 <div className="grid gap-6">
-                  <div className="space-y-2">
-                    <h3 className="font-medium">Theme</h3>
-                    <div className="grid grid-cols-3 gap-3">
-                      <Button variant="outline" className="justify-start px-3 py-6 h-auto aspect-[1.6/1]">
-                        <span className="flex flex-col items-center text-center">
-                          <span className="text-xs">Light</span>
-                        </span>
-                      </Button>
-                      <Button variant="outline" className="justify-start px-3 py-6 h-auto aspect-[1.6/1]">
-                        <span className="flex flex-col items-center text-center">
-                          <span className="text-xs">Dark</span>
-                        </span>
-                      </Button>
-                      <Button variant="outline" className="justify-start px-3 py-6 h-auto aspect-[1.6/1]">
-                        <span className="flex flex-col items-center text-center">
-                          <span className="text-xs">System</span>
-                        </span>
-                      </Button>
+                  <div className="space-y-4">
+                    <h3 className="font-medium text-lg">Theme</h3>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="overflow-hidden rounded-md border-2 border-primary/10 hover:border-primary/50 transition-all">
+                        <button className="w-full h-full p-4 text-center focus:outline-none">
+                          <div className="rounded-md bg-white p-2 shadow-sm mb-2">
+                            <div className="h-10 w-full rounded-md bg-[#f8f9fa]"></div>
+                          </div>
+                          <span className="text-sm font-medium">Light</span>
+                        </button>
+                      </div>
+                      <div className="overflow-hidden rounded-md border-2 border-primary/10 hover:border-primary/50 transition-all">
+                        <button className="w-full h-full p-4 text-center focus:outline-none">
+                          <div className="rounded-md bg-slate-950 p-2 shadow-sm mb-2">
+                            <div className="h-10 w-full rounded-md bg-slate-800"></div>
+                          </div>
+                          <span className="text-sm font-medium">Dark</span>
+                        </button>
+                      </div>
+                      <div className="overflow-hidden rounded-md border-2 border-primary hover:border-primary/80 transition-all">
+                        <button className="w-full h-full p-4 text-center focus:outline-none">
+                          <div className="rounded-md bg-gradient-to-br from-white to-slate-950 p-2 shadow-sm mb-2">
+                            <div className="h-10 w-full rounded-md bg-gradient-to-r from-[#f8f9fa] to-slate-800"></div>
+                          </div>
+                          <span className="text-sm font-medium">System</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
               </CardContent>
-              <CardFooter>
-                <Button className="ml-auto">Save preferences</Button>
+              <CardFooter className="flex justify-end">
+                <Button className="flex items-center gap-2">
+                  <Save className="h-4 w-4" />
+                  Save preferences
+                </Button>
               </CardFooter>
             </Card>
           </TabsContent>
@@ -293,33 +519,58 @@ export default function Settings() {
               </CardHeader>
               <Separator />
               <CardContent className="pt-6">
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                    <h3 className="font-medium">Change Password</h3>
+                <div className="space-y-8">
+                  <div className="space-y-3">
+                    <h3 className="font-medium text-lg">Change Password</h3>
                     <p className="text-sm text-muted-foreground">
                       Update your password to keep your account secure.
                     </p>
-                    <Button variant="outline" size="sm">Change password</Button>
+                    <div className="flex space-x-2">
+                      <Button variant="outline" className="flex items-center gap-1">
+                        <Shield className="h-4 w-4" />
+                        Change password
+                      </Button>
+                    </div>
                   </div>
                   
                   <Separator />
                   
-                  <div className="space-y-2">
-                    <h3 className="font-medium">Two-Factor Authentication</h3>
+                  <div className="space-y-3">
+                    <h3 className="font-medium text-lg">Two-Factor Authentication</h3>
                     <p className="text-sm text-muted-foreground">
-                      Add an extra layer of security to your account.
+                      Add an extra layer of security to your account with two-factor authentication.
                     </p>
-                    <Button variant="outline" size="sm">Configure 2FA</Button>
+                    <div className="p-4 rounded-lg bg-secondary/50">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-medium">Two-factor authentication is not enabled</h4>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Protect your account with an additional security layer
+                          </p>
+                        </div>
+                        <Button>Set up 2FA</Button>
+                      </div>
+                    </div>
                   </div>
                   
                   <Separator />
                   
-                  <div className="space-y-2">
-                    <h3 className="font-medium text-destructive">Danger Zone</h3>
+                  <div className="space-y-3">
+                    <h3 className="font-medium text-lg text-destructive">Danger Zone</h3>
                     <p className="text-sm text-muted-foreground">
                       Permanently delete your account and all associated data.
                     </p>
-                    <Button variant="destructive" size="sm">Delete account</Button>
+                    <div className="p-4 rounded-lg border border-destructive/20 bg-destructive/5">
+                      <div className="flex flex-col space-y-3">
+                        <h4 className="font-medium">Delete account</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Once you delete your account, there is no going back. Please be certain.
+                        </p>
+                        <div>
+                          <Button variant="destructive" size="sm">Delete account</Button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </CardContent>
