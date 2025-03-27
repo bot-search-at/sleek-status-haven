@@ -1,7 +1,6 @@
 
 import { useEffect, useState } from "react";
 import { PageLayout } from "@/components/PageLayout";
-import { mockServices, mockIncidents } from "@/lib/mockData";
 import { ServiceCard } from "@/components/ServiceCard";
 import { IncidentCard } from "@/components/IncidentCard";
 import { Incident, Service } from "@/lib/types";
@@ -10,6 +9,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { CheckCircle, AlertTriangle, Clock } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Index() {
   const [services, setServices] = useState<Service[]>([]);
@@ -17,37 +18,128 @@ export default function Index() {
   const [activeIncidents, setActiveIncidents] = useState<Incident[]>([]);
   const [serviceGroups, setServiceGroups] = useState<Record<string, Service[]>>({});
   const [systemStatus, setSystemStatus] = useState<"operational" | "degraded" | "outage">("operational");
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      setServices(mockServices);
-      setIncidents(mockIncidents);
-
-      // Group services by their group
-      const groups: Record<string, Service[]> = {};
-      mockServices.forEach(service => {
-        if (!groups[service.group]) {
-          groups[service.group] = [];
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        // Fetch services
+        const { data: servicesData, error: servicesError } = await supabase
+          .from('services')
+          .select('*');
+        
+        if (servicesError) throw servicesError;
+        
+        // Map the data to match our type
+        const mappedServices: Service[] = servicesData.map(service => ({
+          id: service.id,
+          name: service.name,
+          description: service.description || '',
+          status: service.status,
+          group: service.service_group,
+          updatedAt: service.updated_at
+        }));
+        
+        setServices(mappedServices);
+        
+        // Group services by their group
+        const groups: Record<string, Service[]> = {};
+        mappedServices.forEach(service => {
+          if (!groups[service.group]) {
+            groups[service.group] = [];
+          }
+          groups[service.group].push(service);
+        });
+        setServiceGroups(groups);
+        
+        // Fetch incidents
+        const { data: incidentsData, error: incidentsError } = await supabase
+          .from('incidents')
+          .select(`
+            *,
+            incident_updates(*)
+          `)
+          .order('created_at', { ascending: false });
+        
+        if (incidentsError) throw incidentsError;
+        
+        // Map the data to match our type
+        const mappedIncidents: Incident[] = incidentsData.map(incident => ({
+          id: incident.id,
+          title: incident.title,
+          status: incident.status,
+          impact: incident.impact,
+          createdAt: incident.created_at,
+          updatedAt: incident.updated_at,
+          resolvedAt: incident.resolved_at,
+          serviceIds: incident.service_ids,
+          updates: incident.incident_updates.map((update: any) => ({
+            id: update.id,
+            incidentId: update.incident_id,
+            status: update.status,
+            message: update.message,
+            createdAt: update.created_at
+          }))
+        }));
+        
+        setIncidents(mappedIncidents);
+        
+        // Filter active incidents
+        const active = mappedIncidents.filter(incident => incident.status !== "resolved");
+        setActiveIncidents(active);
+        
+        // Determine overall system status
+        if (mappedServices.some(s => s.status === "major_outage")) {
+          setSystemStatus("outage");
+        } else if (mappedServices.some(s => ["degraded", "partial_outage"].includes(s.status))) {
+          setSystemStatus("degraded");
+        } else {
+          setSystemStatus("operational");
         }
-        groups[service.group].push(service);
-      });
-      setServiceGroups(groups);
-
-      // Filter active incidents
-      const active = mockIncidents.filter(incident => incident.status !== "resolved");
-      setActiveIncidents(active);
-
-      // Determine overall system status
-      if (mockServices.some(s => s.status === "major_outage")) {
-        setSystemStatus("outage");
-      } else if (mockServices.some(s => ["degraded", "partial_outage"].includes(s.status))) {
-        setSystemStatus("degraded");
-      } else {
-        setSystemStatus("operational");
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        toast({
+          title: "Error fetching data",
+          description: "Could not load status data. Please try again later.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
       }
-    }, 500);
-  }, []);
+    };
+
+    fetchData();
+    
+    // Set up realtime subscription for updates
+    const servicesChannel = supabase
+      .channel('public:services')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'services' 
+      }, () => {
+        fetchData();
+      })
+      .subscribe();
+      
+    const incidentsChannel = supabase
+      .channel('public:incidents')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'incidents' 
+      }, () => {
+        fetchData();
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(servicesChannel);
+      supabase.removeChannel(incidentsChannel);
+    };
+  }, [toast]);
 
   const getStatusIcon = () => {
     switch (systemStatus) {
@@ -70,6 +162,16 @@ export default function Index() {
         return "System Outage Detected";
     }
   };
+
+  if (isLoading) {
+    return (
+      <PageLayout>
+        <div className="max-w-5xl mx-auto flex items-center justify-center min-h-[60vh]">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        </div>
+      </PageLayout>
+    );
+  }
 
   return (
     <PageLayout>
