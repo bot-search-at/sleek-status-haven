@@ -9,7 +9,140 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      admin_users: {
+        Row: {
+          created_at: string
+          id: string
+          is_admin: boolean
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          is_admin?: boolean
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_admin?: boolean
+        }
+        Relationships: []
+      }
+      incident_updates: {
+        Row: {
+          created_at: string
+          id: string
+          incident_id: string
+          message: string
+          status: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          incident_id: string
+          message: string
+          status?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          incident_id?: string
+          message?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incident_updates_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "incidents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      incidents: {
+        Row: {
+          created_at: string
+          id: string
+          impact: string | null
+          resolved_at: string | null
+          service_ids: string[]
+          status: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          impact?: string | null
+          resolved_at?: string | null
+          service_ids: string[]
+          status?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          impact?: string | null
+          resolved_at?: string | null
+          service_ids?: string[]
+          status?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      services: {
+        Row: {
+          description: string | null
+          id: string
+          name: string
+          service_group: string
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          description?: string | null
+          id?: string
+          name: string
+          service_group: string
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          description?: string | null
+          id?: string
+          name?: string
+          service_group?: string
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      uptime_data: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          services: Json
+          uptime: number | null
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          services: Json
+          uptime?: number | null
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          services?: Json
+          uptime?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
