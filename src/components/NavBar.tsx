@@ -2,7 +2,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { Bell, ExternalLink, LogOut, Menu } from "lucide-react";
+import { Bell, ExternalLink, LogOut, Menu, Settings as SettingsIcon } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -63,6 +63,12 @@ export function NavBar() {
           
           {user ? (
             <div className="flex items-center space-x-2">
+              <Link to="/settings">
+                <Button variant="ghost" size="sm" className="hidden md:flex items-center gap-1">
+                  <SettingsIcon className="h-4 w-4" />
+                  <span>Settings</span>
+                </Button>
+              </Link>
               <Link to="/admin">
                 <Button variant="outline" size="sm" className="hidden md:flex">Admin</Button>
               </Link>
@@ -105,6 +111,16 @@ export function NavBar() {
                 ))}
                 {user ? (
                   <>
+                    <Link
+                      to="/settings"
+                      className={cn(
+                        "px-2 py-1 rounded-md transition-colors flex items-center gap-2",
+                        isActive("/settings") ? "bg-secondary text-primary" : "text-muted-foreground"
+                      )}
+                    >
+                      <SettingsIcon className="h-4 w-4" />
+                      <span>Settings</span>
+                    </Link>
                     <Link
                       to="/admin"
                       className={cn(
