@@ -30,6 +30,7 @@ export interface Database extends SupabaseDatabase {
           service_group?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       incidents: {
         Row: {
@@ -62,6 +63,7 @@ export interface Database extends SupabaseDatabase {
           resolved_at?: string | null;
           service_ids?: string[];
         };
+        Relationships: [];
       };
       incident_updates: {
         Row: {
@@ -85,6 +87,15 @@ export interface Database extends SupabaseDatabase {
           message?: string;
           created_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "incident_updates_incident_id_fkey";
+            columns: ["incident_id"];
+            isOneToOne: false;
+            referencedRelation: "incidents";
+            referencedColumns: ["id"];
+          }
+        ];
       };
       uptime_data: {
         Row: {
@@ -108,6 +119,7 @@ export interface Database extends SupabaseDatabase {
           services?: Record<string, { uptime: number; incidents: string[] }>;
           created_at?: string;
         };
+        Relationships: [];
       };
       admin_users: {
         Row: {
@@ -125,6 +137,7 @@ export interface Database extends SupabaseDatabase {
           is_admin?: boolean;
           created_at?: string;
         };
+        Relationships: [];
       };
     };
     Views: {
