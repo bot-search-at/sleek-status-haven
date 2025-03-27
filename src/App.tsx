@@ -5,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/components/ThemeProvider";
-import Dashboard from "./pages/Dashboard";
+import Index from "./pages/Index";
 import IncidentHistory from "./pages/IncidentHistory";
 import Uptime from "./pages/Uptime";
 import Admin from "./pages/Admin";
@@ -26,7 +26,7 @@ const App = () => (
         <BrowserRouter>
           <AuthProvider>
             <Routes>
-              <Route path="/" element={<Dashboard />} />
+              <Route path="/" element={<Index />} />
               <Route path="/incidents" element={<IncidentHistory />} />
               <Route path="/uptime" element={<Uptime />} />
               <Route path="/service/:id" element={<ServiceDetails />} />
