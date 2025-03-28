@@ -6,174 +6,181 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --foreground: 220 20% 16%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
- 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
- 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
- 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
- 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
- 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
- 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --card-foreground: 220 20% 16%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
- 
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 16%;
+
+    --primary: 220 70% 50%;
+    --primary-foreground: 0 0% 98%;
+
+    --secondary: 220 20% 96%;
+    --secondary-foreground: 220 20% 16%;
+
+    --muted: 220 20% 96%;
+    --muted-foreground: 220 20% 64%;
+
+    --accent: 220 20% 96%;
+    --accent-foreground: 220 20% 16%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 220 20% 92%;
+    --input: 220 20% 92%;
+    --ring: 220 70% 50%;
+
     --radius: 0.5rem;
+
+    --status-operational: 142 72% 29%;
+    --status-degraded: 28 96% 54%;
+    --status-partial: 28 96% 54%;
+    --status-major: 0 84% 60%;
+    --status-maintenance: 246 70% 60%;
+    
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
- 
+
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
- 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
- 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
- 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
- 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
- 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
- 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
- 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
- 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --background: 220 20% 10%;
+    --foreground: 0 0% 98%;
+
+    --card: 220 20% 12%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 220 20% 12%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 220 70% 50%;
+    --primary-foreground: 0 0% 98%;
+
+    --secondary: 220 20% 16%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 220 20% 16%;
+    --muted-foreground: 220 20% 64%;
+
+    --accent: 220 20% 16%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 220 20% 24%;
+    --input: 220 20% 24%;
+    --ring: 220 70% 50%;
+
+    --status-operational: 142 72% 29%;
+    --status-degraded: 28 96% 54%;
+    --status-partial: 28 96% 54%;
+    --status-major: 0 84% 60%;
+    --status-maintenance: 246 70% 60%;
+
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
-}
- 
-@layer base {
+
   * {
     @apply border-border;
   }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+  }
+
+  .glass-panel {
+    @apply bg-background/80 backdrop-blur-lg border border-border/50 shadow-sm;
+  }
+
+  .status-dot {
+    @apply h-2.5 w-2.5 rounded-full inline-block mr-2;
+  }
+
+  .status-dot-operational {
+    @apply bg-status-operational animate-pulse-status;
+  }
+
+  .status-dot-degraded {
+    @apply bg-status-degraded animate-pulse-status;
+  }
+
+  .status-dot-partial {
+    @apply bg-status-partial animate-pulse-status;
+  }
+
+  .status-dot-major {
+    @apply bg-status-major animate-pulse-status;
+  }
+
+  .status-dot-maintenance {
+    @apply bg-status-maintenance animate-pulse-status;
+  }
+
+  .service-transition {
+    @apply transition-all duration-300 ease-in-out transform hover:translate-y-[-2px] hover:shadow-md;
+  }
+
+  .page-transition {
+    @apply animate-fade-in;
+  }
+
+  .chart-container {
+    @apply rounded-md p-4 h-full w-full;
+  }
+
+  .status-badge {
+    @apply rounded-full px-3 py-1 text-xs font-medium;
+  }
+
+  .status-badge-operational {
+    @apply bg-status-operational/20 text-status-operational;
+  }
+
+  .status-badge-degraded {
+    @apply bg-status-degraded/20 text-status-degraded;
+  }
+
+  .status-badge-partial {
+    @apply bg-status-partial/20 text-status-partial;
+  }
+
+  .status-badge-major {
+    @apply bg-status-major/20 text-status-major;
+  }
+
+  .status-badge-maintenance {
+    @apply bg-status-maintenance/20 text-status-maintenance;
   }
 }
 
-/* Status Styling */
-.status-dot {
-  @apply inline-block w-2 h-2 rounded-full mr-2;
-}
-
-.status-dot-operational {
-  @apply bg-green-500;
-}
-
-.status-dot-degraded {
-  @apply bg-yellow-500;
-}
-
-.status-dot-partial {
-  @apply bg-orange-500;
-}
-
-.status-dot-major {
-  @apply bg-red-500;
-}
-
-.status-dot-maintenance {
-  @apply bg-blue-500;
-}
-
-.status-badge {
-  @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
-}
-
-.status-badge-operational {
-  @apply bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100;
-}
-
-.status-badge-degraded {
-  @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100;
-}
-
-.status-badge-partial {
-  @apply bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-100;
-}
-
-.status-badge-major {
-  @apply bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100;
-}
-
-.status-badge-maintenance {
-  @apply bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100;
-}
-
-.text-status-operational {
-  @apply text-green-500;
-}
-
-.text-status-degraded {
-  @apply text-yellow-500;
-}
-
-.text-status-partial {
-  @apply text-orange-500;
-}
-
-.text-status-major {
-  @apply text-red-500;
-}
-
-.text-status-maintenance {
-  @apply text-blue-500;
-}
-
-/* Animation */
-.animate-fade-in {
-  animation: fadeIn 0.5s ease-in-out;
-}
-
-.service-transition {
-  transition: all 0.3s ease;
-}
-
-.service-transition:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
+@keyframes float {
+  0% {
+    transform: translateY(0px);
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0px);
   }
 }
 
-/* Discord Bot Styling */
-.discord-message {
-  background-color: #36393f;
-  border-radius: 8px;
-  overflow: hidden;
-  font-family: 'Whitney', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+.float-animation {
+  animation: float 6s ease-in-out infinite;
 }

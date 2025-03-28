@@ -12,7 +12,6 @@ import { CheckCircle, AlertTriangle, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { SubscribeDialog } from "@/components/SubscribeDialog";
-import { DiscordBotStatus } from "@/components/DiscordBotStatus";
 
 export default function Index() {
   const [services, setServices] = useState<Service[]>([]);
@@ -21,7 +20,6 @@ export default function Index() {
   const [serviceGroups, setServiceGroups] = useState<Record<string, Service[]>>({});
   const [systemStatus, setSystemStatus] = useState<"operational" | "degraded" | "outage">("operational");
   const [isLoading, setIsLoading] = useState(true);
-  const [showDiscordView, setShowDiscordView] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -188,135 +186,119 @@ export default function Index() {
           <p className="mt-2 text-muted-foreground">
             Live-Statusüberwachung für alle meine Dienste
           </p>
-          
-          <div className="mt-4">
-            <Button
-              variant="outline"
-              onClick={() => setShowDiscordView(!showDiscordView)}
-              className="mr-2"
-            >
-              {showDiscordView ? "Standard-Ansicht" : "Discord Bot-Ansicht"}
-            </Button>
-          </div>
         </div>
 
-        {showDiscordView ? (
-          <DiscordBotStatus />
-        ) : (
-          <>
-            {activeIncidents.length > 0 && (
-              <div className="mb-8 animate-fade-in">
-                <h2 className="text-xl font-bold mb-4">Aktive Vorfälle</h2>
-                <div className="grid gap-4 grid-cols-1">
-                  {activeIncidents.map(incident => (
-                    <IncidentCard key={incident.id} incident={incident} services={services} />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <Tabs defaultValue="all" className="mb-8 animate-fade-in">
-              <TabsList className="mb-4">
-                <TabsTrigger value="all">Alle Dienste</TabsTrigger>
-                {Object.keys(serviceGroups).map(group => (
-                  <TabsTrigger key={group} value={group}>{group}</TabsTrigger>
-                ))}
-              </TabsList>
-              
-              <TabsContent value="all">
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {services.map(service => (
-                    <ServiceCard key={service.id} service={service} />
-                  ))}
-                </div>
-              </TabsContent>
-              
-              {Object.entries(serviceGroups).map(([group, groupServices]) => (
-                <TabsContent key={group} value={group}>
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {groupServices.map(service => (
-                      <ServiceCard key={service.id} service={service} />
-                    ))}
-                  </div>
-                </TabsContent>
+        {activeIncidents.length > 0 && (
+          <div className="mb-8 animate-fade-in">
+            <h2 className="text-xl font-bold mb-4">Aktive Vorfälle</h2>
+            <div className="grid gap-4 grid-cols-1">
+              {activeIncidents.map(incident => (
+                <IncidentCard key={incident.id} incident={incident} services={services} />
               ))}
-            </Tabs>
-
-            <div className="grid gap-6 md:grid-cols-2 animate-fade-in">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Letzte Vorfälle</CardTitle>
-                  <CardDescription>Neueste gelöste und laufende Vorfälle</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {incidents.length > 0 ? (
-                    <div className="space-y-4">
-                      {incidents.slice(0, 3).map(incident => (
-                        <div key={incident.id} className="flex items-start space-x-3">
-                          {incident.status === "resolved" ? (
-                            <CheckCircle className="mt-0.5 h-4 w-4 text-status-operational" />
-                          ) : (
-                            <Clock className="mt-0.5 h-4 w-4 text-status-degraded" />
-                          )}
-                          <div>
-                            <p className="text-sm font-medium">{incident.title}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {new Date(incident.createdAt).toLocaleDateString()}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">Keine Vorfälle anzuzeigen</p>
-                  )}
-                  
-                  <div className="mt-4">
-                    <Link to="/incidents">
-                      <Button variant="outline" size="sm" className="w-full">Alle Vorfälle anzeigen</Button>
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Geplante Wartung</CardTitle>
-                  <CardDescription>Anstehende geplante Wartungen</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {services.filter(s => s.status === "maintenance").length > 0 ? (
-                    <div className="space-y-4">
-                      {services.filter(s => s.status === "maintenance").map(service => (
-                        <div key={service.id} className="flex items-start space-x-3">
-                          <Clock className="mt-0.5 h-4 w-4 text-status-maintenance" />
-                          <div>
-                            <p className="text-sm font-medium">{service.name} Wartung</p>
-                            <p className="text-xs text-muted-foreground">
-                              {new Date(service.updatedAt).toLocaleDateString()}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">Keine geplante Wartung</p>
-                  )}
-                  
-                  <div className="mt-4">
-                    <SubscribeDialog
-                      trigger={
-                        <Button variant="outline" size="sm" className="w-full">
-                          Updates abonnieren
-                        </Button>
-                      }
-                    />
-                  </div>
-                </CardContent>
-              </Card>
             </div>
-          </>
+          </div>
         )}
+
+        <Tabs defaultValue="all" className="mb-8 animate-fade-in">
+          <TabsList className="mb-4">
+            <TabsTrigger value="all">Alle Dienste</TabsTrigger>
+            {Object.keys(serviceGroups).map(group => (
+              <TabsTrigger key={group} value={group}>{group}</TabsTrigger>
+            ))}
+          </TabsList>
+          
+          <TabsContent value="all">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {services.map(service => (
+                <ServiceCard key={service.id} service={service} />
+              ))}
+            </div>
+          </TabsContent>
+          
+          {Object.entries(serviceGroups).map(([group, groupServices]) => (
+            <TabsContent key={group} value={group}>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {groupServices.map(service => (
+                  <ServiceCard key={service.id} service={service} />
+                ))}
+              </div>
+            </TabsContent>
+          ))}
+        </Tabs>
+
+        <div className="grid gap-6 md:grid-cols-2 animate-fade-in">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Letzte Vorfälle</CardTitle>
+              <CardDescription>Neueste gelöste und laufende Vorfälle</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {incidents.length > 0 ? (
+                <div className="space-y-4">
+                  {incidents.slice(0, 3).map(incident => (
+                    <div key={incident.id} className="flex items-start space-x-3">
+                      {incident.status === "resolved" ? (
+                        <CheckCircle className="mt-0.5 h-4 w-4 text-status-operational" />
+                      ) : (
+                        <Clock className="mt-0.5 h-4 w-4 text-status-degraded" />
+                      )}
+                      <div>
+                        <p className="text-sm font-medium">{incident.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(incident.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Keine Vorfälle anzuzeigen</p>
+              )}
+              
+              <div className="mt-4">
+                <Link to="/incidents">
+                  <Button variant="outline" size="sm" className="w-full">Alle Vorfälle anzeigen</Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Geplante Wartung</CardTitle>
+              <CardDescription>Anstehende geplante Wartungen</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {services.filter(s => s.status === "maintenance").length > 0 ? (
+                <div className="space-y-4">
+                  {services.filter(s => s.status === "maintenance").map(service => (
+                    <div key={service.id} className="flex items-start space-x-3">
+                      <Clock className="mt-0.5 h-4 w-4 text-status-maintenance" />
+                      <div>
+                        <p className="text-sm font-medium">{service.name} Wartung</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(service.updatedAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Keine geplante Wartung</p>
+              )}
+              
+              <div className="mt-4">
+                <SubscribeDialog
+                  trigger={
+                    <Button variant="outline" size="sm" className="w-full">
+                      Updates abonnieren
+                    </Button>
+                  }
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </PageLayout>
   );
