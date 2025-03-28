@@ -95,8 +95,8 @@ export function UptimeChart({
                   fontSize: "0.875rem",
                   color: isDark ? "#f3f4f6" : "#1f2937",
                 }}
-                labelFormatter={(value) => `Datum: ${value}`} // Translate to German
-                formatter={(value: any) => [`${value.toFixed(2)}%`, "Verfügbarkeit"]} // Translate to German
+                labelFormatter={(value) => `Datum: ${value}`}
+                formatter={(value: any) => [`${value.toFixed(2)}%`, "Verfügbarkeit"]}
               />
               <Area 
                 type="monotone" 

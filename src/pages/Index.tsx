@@ -156,11 +156,11 @@ export default function Index() {
   const getStatusMessage = () => {
     switch (systemStatus) {
       case "operational":
-        return "All Systems Operational";
+        return "Alle Systeme betriebsbereit";
       case "degraded":
-        return "Some Systems Degraded";
+        return "Einige Systeme beeinträchtigt";
       case "outage":
-        return "System Outage Detected";
+        return "Systemausfall erkannt";
     }
   };
 
@@ -182,15 +182,15 @@ export default function Index() {
             {getStatusIcon()}
             <span className="font-medium">{getStatusMessage()}</span>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">Bot Search_AT Status Page</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Bot Search_AT Statusseite</h1>
           <p className="mt-2 text-muted-foreground">
-            Live status monitoring for all my services
+            Live-Statusüberwachung für alle meine Dienste
           </p>
         </div>
 
         {activeIncidents.length > 0 && (
           <div className="mb-8 animate-fade-in">
-            <h2 className="text-xl font-bold mb-4">Active Incidents</h2>
+            <h2 className="text-xl font-bold mb-4">Aktive Vorfälle</h2>
             <div className="grid gap-4 grid-cols-1">
               {activeIncidents.map(incident => (
                 <IncidentCard key={incident.id} incident={incident} services={services} />
@@ -201,7 +201,7 @@ export default function Index() {
 
         <Tabs defaultValue="all" className="mb-8 animate-fade-in">
           <TabsList className="mb-4">
-            <TabsTrigger value="all">All Services</TabsTrigger>
+            <TabsTrigger value="all">Alle Dienste</TabsTrigger>
             {Object.keys(serviceGroups).map(group => (
               <TabsTrigger key={group} value={group}>{group}</TabsTrigger>
             ))}
@@ -229,8 +229,8 @@ export default function Index() {
         <div className="grid gap-6 md:grid-cols-2 animate-fade-in">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Recent Incidents</CardTitle>
-              <CardDescription>Latest resolved and ongoing incidents</CardDescription>
+              <CardTitle className="text-lg">Letzte Vorfälle</CardTitle>
+              <CardDescription>Neueste gelöste und laufende Vorfälle</CardDescription>
             </CardHeader>
             <CardContent>
               {incidents.length > 0 ? (
@@ -252,12 +252,12 @@ export default function Index() {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">No incidents to display</p>
+                <p className="text-sm text-muted-foreground">Keine Vorfälle anzuzeigen</p>
               )}
               
               <div className="mt-4">
                 <Link to="/incidents">
-                  <Button variant="outline" size="sm" className="w-full">View All Incidents</Button>
+                  <Button variant="outline" size="sm" className="w-full">Alle Vorfälle anzeigen</Button>
                 </Link>
               </div>
             </CardContent>
@@ -265,8 +265,8 @@ export default function Index() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Scheduled Maintenance</CardTitle>
-              <CardDescription>Upcoming planned maintenance</CardDescription>
+              <CardTitle className="text-lg">Geplante Wartung</CardTitle>
+              <CardDescription>Anstehende geplante Wartungen</CardDescription>
             </CardHeader>
             <CardContent>
               {services.filter(s => s.status === "maintenance").length > 0 ? (
@@ -275,7 +275,7 @@ export default function Index() {
                     <div key={service.id} className="flex items-start space-x-3">
                       <Clock className="mt-0.5 h-4 w-4 text-status-maintenance" />
                       <div>
-                        <p className="text-sm font-medium">{service.name} Maintenance</p>
+                        <p className="text-sm font-medium">{service.name} Wartung</p>
                         <p className="text-xs text-muted-foreground">
                           {new Date(service.updatedAt).toLocaleDateString()}
                         </p>
@@ -284,14 +284,14 @@ export default function Index() {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">No scheduled maintenance</p>
+                <p className="text-sm text-muted-foreground">Keine geplante Wartung</p>
               )}
               
               <div className="mt-4">
                 <SubscribeDialog
                   trigger={
                     <Button variant="outline" size="sm" className="w-full">
-                      Subscribe to Updates
+                      Updates abonnieren
                     </Button>
                   }
                 />

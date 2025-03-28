@@ -9,11 +9,11 @@ interface StatusBadgeProps {
 }
 
 const statusMap: Record<ServiceStatus, { class: string; label: string }> = {
-  operational: { class: "status-badge-operational", label: "Operational" },
-  degraded: { class: "status-badge-degraded", label: "Degraded" },
-  partial_outage: { class: "status-badge-partial", label: "Partial Outage" },
-  major_outage: { class: "status-badge-major", label: "Major Outage" },
-  maintenance: { class: "status-badge-maintenance", label: "Maintenance" },
+  operational: { class: "status-badge-operational", label: "Betriebsbereit" },
+  degraded: { class: "status-badge-degraded", label: "Beeinträchtigt" },
+  partial_outage: { class: "status-badge-partial", label: "Teilausfall" },
+  major_outage: { class: "status-badge-major", label: "Schwerer Ausfall" },
+  maintenance: { class: "status-badge-maintenance", label: "Wartung" },
 };
 
 export function StatusBadge({ 

@@ -17,8 +17,8 @@ export function NavBar() {
   
   const navItems = [
     { name: "Status", path: "/" },
-    { name: "Incident History", path: "/incidents" },
-    { name: "Uptime", path: "/uptime" },
+    { name: "Vorfälle", path: "/incidents" },
+    { name: "Verfügbarkeit", path: "/uptime" },
   ];
 
   return (
@@ -59,7 +59,7 @@ export function NavBar() {
                 className="hidden md:flex items-center gap-1"
               >
                 <Bell className="h-4 w-4" />
-                <span>Subscribe</span>
+                <span>Abonnieren</span>
               </Button>
             }
           />
@@ -69,7 +69,7 @@ export function NavBar() {
               <Link to="/settings">
                 <Button variant="ghost" size="sm" className="hidden md:flex items-center gap-1">
                   <SettingsIcon className="h-4 w-4" />
-                  <span>Settings</span>
+                  <span>Einstellungen</span>
                 </Button>
               </Link>
               <Link to="/admin">
@@ -82,12 +82,12 @@ export function NavBar() {
                 onClick={() => signOut()}
               >
                 <LogOut className="h-4 w-4" />
-                <span>Logout</span>
+                <span>Abmelden</span>
               </Button>
             </div>
           ) : (
             <Link to="/login">
-              <Button variant="outline" size="sm" className="hidden md:flex">Login</Button>
+              <Button variant="outline" size="sm" className="hidden md:flex">Anmelden</Button>
             </Link>
           )}
           
@@ -95,7 +95,7 @@ export function NavBar() {
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="md:hidden">
                 <Menu className="h-5 w-5" />
-                <span className="sr-only">Toggle menu</span>
+                <span className="sr-only">Menü öffnen</span>
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-[80vw] sm:w-[350px]">
@@ -118,7 +118,7 @@ export function NavBar() {
                       className="flex items-center gap-2 px-2 py-1 rounded-md text-muted-foreground transition-colors hover:bg-secondary"
                     >
                       <Bell className="h-4 w-4" />
-                      <span>Subscribe</span>
+                      <span>Abonnieren</span>
                     </button>
                   }
                 />
@@ -132,7 +132,7 @@ export function NavBar() {
                       )}
                     >
                       <SettingsIcon className="h-4 w-4" />
-                      <span>Settings</span>
+                      <span>Einstellungen</span>
                     </Link>
                     <Link
                       to="/admin"
@@ -148,7 +148,7 @@ export function NavBar() {
                       className="flex items-center gap-2 px-2 py-1 rounded-md text-muted-foreground transition-colors hover:bg-secondary"
                     >
                       <LogOut className="h-4 w-4" />
-                      <span>Logout</span>
+                      <span>Abmelden</span>
                     </button>
                   </>
                 ) : (
@@ -159,7 +159,7 @@ export function NavBar() {
                       isActive("/login") ? "bg-secondary text-primary" : "text-muted-foreground"
                     )}
                   >
-                    Login
+                    Anmelden
                   </Link>
                 )}
               </nav>

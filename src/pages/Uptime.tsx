@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { PageLayout } from "@/components/PageLayout";
 import { UptimeChart } from "@/components/UptimeChart";
@@ -32,14 +31,12 @@ export default function Uptime() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      // Fetch services
       const { data: servicesData, error: servicesError } = await supabase
         .from('services')
         .select('*');
       
       if (servicesError) throw servicesError;
       
-      // Map the data to match our type
       const mappedServices: Service[] = servicesData.map(service => ({
         id: service.id,
         name: service.name,
@@ -51,7 +48,6 @@ export default function Uptime() {
       
       setServices(mappedServices);
       
-      // Fetch uptime data
       const { data: uptimeDataResult, error: uptimeError } = await supabase
         .from('uptime_data')
         .select('*')
@@ -59,7 +55,6 @@ export default function Uptime() {
       
       if (uptimeError) throw uptimeError;
       
-      // Map the data to match our type
       const mappedUptimeData: UptimeDay[] = uptimeDataResult.map(day => ({
         date: day.date,
         uptime: day.uptime as number,
@@ -68,7 +63,6 @@ export default function Uptime() {
       
       setUptimeData(mappedUptimeData);
       
-      // Find the uptime data for the selected date
       const dayData = mappedUptimeData.find(day => day.date === selectedDate);
       setCurrentUptimeDay(dayData || null);
       
@@ -87,7 +81,6 @@ export default function Uptime() {
   useEffect(() => {
     fetchData();
     
-    // Set up realtime subscription for updates
     const uptimeChannel = supabase
       .channel('public:uptime_data')
       .on('postgres_changes', { 
@@ -117,7 +110,6 @@ export default function Uptime() {
   }, []);
 
   useEffect(() => {
-    // Update current uptime day when selected date changes
     const dayData = uptimeData.find(day => day.date === selectedDate);
     setCurrentUptimeDay(dayData || null);
   }, [selectedDate, uptimeData]);
@@ -152,9 +144,9 @@ export default function Uptime() {
   };
 
   const timeRangeOptions = [
-    { value: "7", label: "7 days" },
-    { value: "30", label: "30 days" },
-    { value: "90", label: "90 days" },
+    { value: "7", label: "7 Tage" },
+    { value: "30", label: "30 Tage" },
+    { value: "90", label: "90 Tage" },
   ];
 
   const handleDateSelect = (date: string) => {
@@ -165,16 +157,16 @@ export default function Uptime() {
     <PageLayout>
       <div className="max-w-5xl mx-auto">
         <div className="mb-8 text-center animate-fade-in">
-          <h1 className="text-3xl font-bold tracking-tight">Uptime History</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Verfügbarkeitshistorie</h1>
           <p className="mt-2 text-muted-foreground">
-            Historical uptime performance of our services
+            Historische Verfügbarkeitsleistung unserer Dienste
           </p>
         </div>
         
         <div className="mb-8 flex flex-col sm:flex-row justify-between gap-4 animate-fade-in">
           <Select value={timeRange} onValueChange={setTimeRange}>
             <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select time range" />
+              <SelectValue placeholder="Zeitraum wählen" />
             </SelectTrigger>
             <SelectContent>
               {timeRangeOptions.map(option => (
@@ -186,9 +178,9 @@ export default function Uptime() {
           </Select>
           
           <div className="text-sm text-muted-foreground">
-            Overall uptime: <span className="font-medium text-foreground">
+            Gesamtverfügbarkeit: <span className="font-medium text-foreground">
               {getOverallUptime(parseInt(timeRange)).toFixed(2)}%
-            </span> in the last {timeRange} days
+            </span> in den letzten {timeRange} Tagen
           </div>
         </div>
         
@@ -198,7 +190,7 @@ export default function Uptime() {
             onValueChange={handleDateSelect}
           >
             <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select date" />
+              <SelectValue placeholder="Datum wählen" />
             </SelectTrigger>
             <SelectContent>
               {uptimeData.map(day => (
@@ -208,7 +200,7 @@ export default function Uptime() {
               ))}
               {uptimeData.findIndex(day => day.date === selectedDate) === -1 && (
                 <SelectItem value={selectedDate}>
-                  {new Date(selectedDate).toLocaleDateString()} (New)
+                  {new Date(selectedDate).toLocaleDateString()} (Neu)
                 </SelectItem>
               )}
             </SelectContent>
@@ -229,8 +221,8 @@ export default function Uptime() {
             <CardHeader className="pb-0">
               <CardTitle className="text-lg">
                 {selectedService 
-                  ? `${services.find(s => s.id === selectedService)?.name} Uptime` 
-                  : "System Uptime"
+                  ? `${services.find(s => s.id === selectedService)?.name} Verfügbarkeit` 
+                  : "Systemverfügbarkeit"
                 }
               </CardTitle>
             </CardHeader>
@@ -243,7 +235,7 @@ export default function Uptime() {
               />
               
               <div className="mt-4 text-xs text-center text-muted-foreground">
-                Showing uptime for the last {timeRange} days
+                Zeigt Verfügbarkeit für die letzten {timeRange} Tage
               </div>
             </CardContent>
           </Card>
@@ -251,7 +243,7 @@ export default function Uptime() {
         
         <Tabs defaultValue="all" className="animate-fade-in">
           <TabsList className="mb-4">
-            <TabsTrigger value="all">All Services</TabsTrigger>
+            <TabsTrigger value="all">Alle Dienste</TabsTrigger>
             {Array.from(new Set(services.map(s => s.group))).map(group => (
               <TabsTrigger key={group} value={group}>{group}</TabsTrigger>
             ))}
@@ -281,7 +273,7 @@ export default function Uptime() {
                         {getServiceUptime(service.id, parseInt(timeRange)).toFixed(2)}%
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        Last {timeRange} days
+                        Letzte {timeRange} Tage
                       </div>
                     </div>
                   </CardContent>
@@ -317,7 +309,7 @@ export default function Uptime() {
                             {getServiceUptime(service.id, parseInt(timeRange)).toFixed(2)}%
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            Last {timeRange} days
+                            Letzte {timeRange} Tage
                           </div>
                         </div>
                       </CardContent>
