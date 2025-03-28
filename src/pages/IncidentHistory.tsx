@@ -1,12 +1,13 @@
 
 import { useEffect, useState } from "react";
 import { PageLayout } from "@/components/PageLayout";
-import { mockIncidents, mockServices } from "@/lib/mockData";
 import { IncidentCard } from "@/components/IncidentCard";
 import { Incident, Service } from "@/lib/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 export default function IncidentHistory() {
   const [incidents, setIncidents] = useState<Incident[]>([]);
@@ -15,14 +16,76 @@ export default function IncidentHistory() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [impactFilter, setImpactFilter] = useState("all");
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
   
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      setIncidents(mockIncidents);
-      setServices(mockServices);
-      setFilteredIncidents(mockIncidents);
-    }, 500);
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        // Fetch services
+        const { data: servicesData, error: servicesError } = await supabase
+          .from('services')
+          .select('*');
+        
+        if (servicesError) throw servicesError;
+        
+        const mappedServices: Service[] = servicesData.map(service => ({
+          id: service.id,
+          name: service.name,
+          description: service.description || '',
+          status: service.status,
+          group: service.service_group,
+          updatedAt: service.updated_at
+        }));
+        
+        setServices(mappedServices);
+        
+        // Fetch incidents with updates
+        const { data: incidentsData, error: incidentsError } = await supabase
+          .from('incidents')
+          .select(`
+            *,
+            incident_updates(*)
+          `)
+          .order('created_at', { ascending: false });
+        
+        if (incidentsError) throw incidentsError;
+        
+        // Map to our type
+        const mappedIncidents: Incident[] = incidentsData.map(incident => ({
+          id: incident.id,
+          title: incident.title,
+          status: incident.status,
+          impact: incident.impact,
+          createdAt: incident.created_at,
+          updatedAt: incident.updated_at,
+          resolvedAt: incident.resolved_at,
+          serviceIds: incident.service_ids,
+          updates: incident.incident_updates.map((update: any) => ({
+            id: update.id,
+            incidentId: update.incident_id,
+            status: update.status,
+            message: update.message,
+            createdAt: update.created_at
+          }))
+        }));
+        
+        setIncidents(mappedIncidents);
+        setFilteredIncidents(mappedIncidents);
+      } catch (error) {
+        console.error("Fehler beim Laden der Vorfälle:", error);
+        toast({
+          title: "Fehler beim Laden",
+          description: "Die Vorfälle konnten nicht geladen werden. Bitte versuchen Sie es später erneut.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
   
   useEffect(() => {
@@ -56,7 +119,7 @@ export default function IncidentHistory() {
     
     filteredIncidents.forEach(incident => {
       const date = new Date(incident.createdAt);
-      const monthYear = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      const monthYear = date.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
       
       if (!groups[monthYear]) {
         groups[monthYear] = [];
@@ -70,20 +133,32 @@ export default function IncidentHistory() {
   
   const incidentGroups = getIncidentGroups();
   
+  if (isLoading) {
+    return (
+      <PageLayout>
+        <div className="max-w-5xl mx-auto text-center py-12">
+          <div className="animate-pulse w-24 h-6 bg-secondary rounded mx-auto mb-2"></div>
+          <div className="animate-pulse w-48 h-8 bg-secondary rounded mx-auto mb-4"></div>
+          <div className="animate-pulse w-64 h-4 bg-secondary rounded mx-auto"></div>
+        </div>
+      </PageLayout>
+    );
+  }
+  
   return (
     <PageLayout>
       <div className="max-w-5xl mx-auto">
         <div className="mb-8 text-center animate-fade-in">
-          <h1 className="text-3xl font-bold tracking-tight">Incident History</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Vorfallshistorie</h1>
           <p className="mt-2 text-muted-foreground">
-            A complete history of all incidents and their resolutions
+            Eine vollständige Geschichte aller Vorfälle und deren Lösungen
           </p>
         </div>
         
         <div className="mb-8 space-y-4 animate-fade-in">
           <div className="flex flex-col sm:flex-row gap-4">
             <Input
-              placeholder="Search incidents..."
+              placeholder="Vorfälle suchen..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               className="sm:max-w-xs"
@@ -95,24 +170,24 @@ export default function IncidentHistory() {
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="investigating">Investigating</SelectItem>
-                  <SelectItem value="identified">Identified</SelectItem>
-                  <SelectItem value="monitoring">Monitoring</SelectItem>
-                  <SelectItem value="resolved">Resolved</SelectItem>
+                  <SelectItem value="all">Alle Status</SelectItem>
+                  <SelectItem value="investigating">Untersuchen</SelectItem>
+                  <SelectItem value="identified">Identifiziert</SelectItem>
+                  <SelectItem value="monitoring">Überwachung</SelectItem>
+                  <SelectItem value="resolved">Gelöst</SelectItem>
                 </SelectContent>
               </Select>
               
               <Select value={impactFilter} onValueChange={setImpactFilter}>
                 <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Impact" />
+                  <SelectValue placeholder="Auswirkung" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Impacts</SelectItem>
-                  <SelectItem value="none">None</SelectItem>
-                  <SelectItem value="minor">Minor</SelectItem>
-                  <SelectItem value="major">Major</SelectItem>
-                  <SelectItem value="critical">Critical</SelectItem>
+                  <SelectItem value="all">Alle Auswirkungen</SelectItem>
+                  <SelectItem value="none">Keine</SelectItem>
+                  <SelectItem value="minor">Gering</SelectItem>
+                  <SelectItem value="major">Erheblich</SelectItem>
+                  <SelectItem value="critical">Kritisch</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -121,9 +196,9 @@ export default function IncidentHistory() {
         
         <Tabs defaultValue="all" className="animate-fade-in">
           <TabsList className="mb-4">
-            <TabsTrigger value="all">All Incidents</TabsTrigger>
-            <TabsTrigger value="active">Active Incidents</TabsTrigger>
-            <TabsTrigger value="resolved">Resolved Incidents</TabsTrigger>
+            <TabsTrigger value="all">Alle Vorfälle</TabsTrigger>
+            <TabsTrigger value="active">Aktive Vorfälle</TabsTrigger>
+            <TabsTrigger value="resolved">Gelöste Vorfälle</TabsTrigger>
           </TabsList>
           
           <TabsContent value="all">
@@ -145,8 +220,8 @@ export default function IncidentHistory() {
                 ))
               ) : (
                 <div className="text-center py-12 animate-fade-in">
-                  <p className="text-lg font-medium">No incidents found</p>
-                  <p className="text-muted-foreground">Try adjusting your search criteria</p>
+                  <p className="text-lg font-medium">Keine Vorfälle gefunden</p>
+                  <p className="text-muted-foreground">Passen Sie Ihre Suchkriterien an</p>
                 </div>
               )}
             </div>
@@ -166,8 +241,8 @@ export default function IncidentHistory() {
                   ))
               ) : (
                 <div className="text-center py-12 animate-fade-in">
-                  <p className="text-lg font-medium">No active incidents</p>
-                  <p className="text-muted-foreground">All systems are currently operational</p>
+                  <p className="text-lg font-medium">Keine aktiven Vorfälle</p>
+                  <p className="text-muted-foreground">Alle Systeme sind derzeit betriebsbereit</p>
                 </div>
               )}
             </div>
@@ -187,8 +262,8 @@ export default function IncidentHistory() {
                   ))
               ) : (
                 <div className="text-center py-12 animate-fade-in">
-                  <p className="text-lg font-medium">No resolved incidents</p>
-                  <p className="text-muted-foreground">No data available for the selected filters</p>
+                  <p className="text-lg font-medium">Keine gelösten Vorfälle</p>
+                  <p className="text-muted-foreground">Keine Daten für die ausgewählten Filter verfügbar</p>
                 </div>
               )}
             </div>
@@ -198,3 +273,4 @@ export default function IncidentHistory() {
     </PageLayout>
   );
 }
+
