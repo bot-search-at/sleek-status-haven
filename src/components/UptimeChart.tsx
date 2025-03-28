@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
+import { de } from "date-fns/locale"; // Import the German locale correctly
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UptimeDay } from "@/lib/types";
 import { 
@@ -24,7 +25,7 @@ interface UptimeChartProps {
 
 export function UptimeChart({ 
   data, 
-  title = "Uptime", 
+  title = "Verfügbarkeit", 
   days = 30,
   height = 240,
   serviceId = null
@@ -40,7 +41,7 @@ export function UptimeChart({
       uptime: serviceId && day.services[serviceId] 
         ? day.services[serviceId].uptime 
         : day.uptime,
-      formattedDate: format(new Date(day.date), "MMM d")
+      formattedDate: format(new Date(day.date), "MMM d", { locale: de }) // Use German locale
     }));
     
     setChartData(formattedData);
@@ -94,8 +95,8 @@ export function UptimeChart({
                   fontSize: "0.875rem",
                   color: isDark ? "#f3f4f6" : "#1f2937",
                 }}
-                labelFormatter={(value) => `Date: ${value}`}
-                formatter={(value: any) => [`${value.toFixed(2)}%`, "Uptime"]}
+                labelFormatter={(value) => `Datum: ${value}`} // Translate to German
+                formatter={(value: any) => [`${value.toFixed(2)}%`, "Verfügbarkeit"]} // Translate to German
               />
               <Area 
                 type="monotone" 

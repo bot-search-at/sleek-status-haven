@@ -1,6 +1,7 @@
 
 import { Incident, IncidentUpdate } from "@/lib/types";
 import { format } from "date-fns";
+import { de } from "date-fns/locale"; // Import German locale correctly
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +14,14 @@ const statusStyles = {
   identified: "bg-amber-500 text-white",
   monitoring: "bg-blue-500 text-white",
   resolved: "bg-green-500 text-white",
+};
+
+// Translation map for incident status
+const statusTranslations = {
+  investigating: "Untersuchung",
+  identified: "Identifiziert",
+  monitoring: "Überwachung",
+  resolved: "Gelöst",
 };
 
 export function IncidentTimeline({ incident }: IncidentTimelineProps) {
@@ -35,10 +44,10 @@ export function IncidentTimeline({ incident }: IncidentTimelineProps) {
           <div>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2">
               <Badge className={cn("w-fit uppercase mb-1 sm:mb-0", statusStyles[update.status])}>
-                {update.status}
+                {statusTranslations[update.status] || update.status}
               </Badge>
               <time className="text-sm text-muted-foreground">
-                {format(new Date(update.createdAt), "MMM d, yyyy 'at' h:mm aaa")}
+                {format(new Date(update.createdAt), "dd. MMMM yyyy 'um' HH:mm 'Uhr'", { locale: de })}
               </time>
             </div>
             <p className="text-sm">{update.message}</p>

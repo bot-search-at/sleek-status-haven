@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Service } from "@/lib/types";
 import { StatusDot } from "./StatusDot";
 import { format } from "date-fns";
+import { de } from "date-fns/locale"; // Import German locale correctly
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 
@@ -26,7 +27,7 @@ export function ServiceCard({ service }: ServiceCardProps) {
         <CardContent>
           <p className="text-sm text-muted-foreground">{service.description}</p>
           <div className="mt-4 text-xs text-muted-foreground">
-            Updated {format(new Date(service.updatedAt), "MMM d, h:mmaaa")}
+            Aktualisiert am {format(new Date(service.updatedAt), "dd. MMM, HH:mm 'Uhr'", { locale: de })}
           </div>
         </CardContent>
       </Card>
