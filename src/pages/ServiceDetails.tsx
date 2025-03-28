@@ -10,7 +10,10 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
+import { de } from "date-fns/locale";
 import { ArrowLeft, Clock } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ServiceDetails() {
   const { id } = useParams<{ id: string }>();
@@ -18,25 +21,105 @@ export default function ServiceDetails() {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [uptimeData, setUptimeData] = useState<UptimeDay[]>([]);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
   
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      if (id) {
+    const fetchServiceData = async () => {
+      setLoading(true);
+      try {
+        if (id) {
+          // Fetch service data
+          const { data: serviceData, error: serviceError } = await supabase
+            .from('services')
+            .select('*')
+            .eq('id', id)
+            .single();
+          
+          if (serviceError) throw serviceError;
+          
+          // Map to our type
+          const mappedService: Service = {
+            id: serviceData.id,
+            name: serviceData.name,
+            description: serviceData.description || '',
+            status: serviceData.status,
+            group: serviceData.service_group,
+            updatedAt: serviceData.updated_at
+          };
+          
+          setService(mappedService);
+          
+          // Fetch incidents related to this service
+          const { data: incidentsData, error: incidentsError } = await supabase
+            .from('incidents')
+            .select(`
+              *,
+              incident_updates(*)
+            `)
+            .contains('service_ids', [id])
+            .order('created_at', { ascending: false });
+          
+          if (incidentsError) throw incidentsError;
+          
+          // Map to our type
+          const mappedIncidents: Incident[] = incidentsData.map(incident => ({
+            id: incident.id,
+            title: incident.title,
+            status: incident.status,
+            impact: incident.impact,
+            createdAt: incident.created_at,
+            updatedAt: incident.updated_at,
+            resolvedAt: incident.resolved_at,
+            serviceIds: incident.service_ids,
+            updates: incident.incident_updates.map((update: any) => ({
+              id: update.id,
+              incidentId: update.incident_id,
+              status: update.status,
+              message: update.message,
+              createdAt: update.created_at
+            }))
+          }));
+          
+          setIncidents(mappedIncidents);
+          
+          // Fetch uptime data
+          const { data: uptimeData, error: uptimeError } = await supabase
+            .from('uptime_data')
+            .select('*')
+            .order('date', { ascending: true });
+          
+          if (!uptimeError && uptimeData) {
+            setUptimeData(uptimeData);
+          } else {
+            // Fallback to mock data if we couldn't fetch real data
+            setUptimeData(mockUptimeData);
+          }
+        }
+      } catch (error) {
+        console.error("Fehler beim Laden der Servicedaten:", error);
+        toast({
+          title: "Fehler beim Laden",
+          description: "Die Servicedaten konnten nicht geladen werden. Bitte versuchen Sie es später erneut.",
+          variant: "destructive",
+        });
+        
+        // Fallback to mock data
         const foundService = mockServices.find(s => s.id === id);
         setService(foundService || null);
         
-        // Find incidents related to this service
         const serviceIncidents = mockIncidents.filter(
-          incident => incident.serviceIds.includes(id)
+          incident => incident.serviceIds.includes(id || '')
         );
         setIncidents(serviceIncidents);
         
         setUptimeData(mockUptimeData);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
-    }, 500);
-  }, [id]);
+    };
+
+    fetchServiceData();
+  }, [id, toast]);
 
   const getServiceUptime = (days: number): number => {
     const recentData = uptimeData.slice(-days);
@@ -71,12 +154,12 @@ export default function ServiceDetails() {
     return (
       <PageLayout>
         <div className="max-w-5xl mx-auto text-center py-12">
-          <h1 className="text-2xl font-bold mb-4">Service Not Found</h1>
+          <h1 className="text-2xl font-bold mb-4">Service nicht gefunden</h1>
           <p className="text-muted-foreground mb-6">
-            The service you're looking for doesn't exist or has been removed.
+            Der gesuchte Service existiert nicht oder wurde entfernt.
           </p>
           <Link to="/">
-            <Button>Return to Dashboard</Button>
+            <Button>Zurück zur Übersicht</Button>
           </Link>
         </div>
       </PageLayout>
@@ -89,7 +172,7 @@ export default function ServiceDetails() {
         <div className="mb-8 animate-fade-in">
           <Link to="/" className="text-muted-foreground hover:text-primary transition-colors inline-flex items-center mb-4">
             <ArrowLeft className="mr-1 h-4 w-4" />
-            Back to Dashboard
+            Zurück zur Übersicht
           </Link>
           
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -104,15 +187,15 @@ export default function ServiceDetails() {
           </div>
           
           <div className="mt-2 text-sm text-muted-foreground">
-            Last updated: {format(new Date(service.updatedAt), "MMMM d, yyyy 'at' h:mm aaa")}
+            Zuletzt aktualisiert: {format(new Date(service.updatedAt), "d. MMMM yyyy 'um' HH:mm 'Uhr'", { locale: de })}
           </div>
         </div>
         
         <div className="grid gap-6 md:grid-cols-2 mb-8 animate-fade-in">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">30-Day Uptime</CardTitle>
-              <CardDescription>Historical availability</CardDescription>
+              <CardTitle className="text-lg">30-Tage Verfügbarkeit</CardTitle>
+              <CardDescription>Historische Verfügbarkeit</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold mb-4">
@@ -120,17 +203,18 @@ export default function ServiceDetails() {
               </div>
               <UptimeChart 
                 data={uptimeData} 
-                title={`${service.name} Uptime`}
+                title={`${service.name} Verfügbarkeit`}
                 days={30}
                 height={200}
+                serviceId={service.id}
               />
             </CardContent>
           </Card>
           
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Service Status</CardTitle>
-              <CardDescription>Current operational details</CardDescription>
+              <CardTitle className="text-lg">Service-Status</CardTitle>
+              <CardDescription>Aktuelle Betriebsdetails</CardDescription>
             </CardHeader>
             <CardContent>
               <dl className="space-y-4">
@@ -142,20 +226,20 @@ export default function ServiceDetails() {
                 </div>
                 
                 <div>
-                  <dt className="text-sm font-medium text-muted-foreground">Group</dt>
+                  <dt className="text-sm font-medium text-muted-foreground">Gruppe</dt>
                   <dd className="mt-1">{service.group}</dd>
                 </div>
                 
                 <div>
-                  <dt className="text-sm font-medium text-muted-foreground">Active Incidents</dt>
+                  <dt className="text-sm font-medium text-muted-foreground">Aktive Vorfälle</dt>
                   <dd className="mt-1">
-                    {incidents.filter(i => i.status !== "resolved").length || "None"}
+                    {incidents.filter(i => i.status !== "resolved").length || "Keine"}
                   </dd>
                 </div>
                 
                 <div>
-                  <dt className="text-sm font-medium text-muted-foreground">Historical Incidents</dt>
-                  <dd className="mt-1">{incidents.length}</dd>
+                  <dt className="text-sm font-medium text-muted-foreground">Historische Vorfälle</dt>
+                  <dd className="mt-1">{incidents.length || "Keine"}</dd>
                 </div>
               </dl>
             </CardContent>
@@ -163,7 +247,7 @@ export default function ServiceDetails() {
         </div>
         
         <div className="mb-8 animate-fade-in">
-          <h2 className="text-xl font-bold mb-4">Recent Incidents</h2>
+          <h2 className="text-xl font-bold mb-4">Letzte Vorfälle</h2>
           
           {incidents.length > 0 ? (
             <div className="space-y-4">
@@ -179,9 +263,9 @@ export default function ServiceDetails() {
             <Card>
               <CardContent className="py-8 text-center">
                 <Clock className="mx-auto h-12 w-12 text-muted-foreground opacity-50 mb-4" />
-                <h3 className="text-lg font-medium mb-2">No Incidents</h3>
+                <h3 className="text-lg font-medium mb-2">Keine Vorfälle</h3>
                 <p className="text-muted-foreground">
-                  No incidents have been reported for this service.
+                  Für diesen Service wurden keine Vorfälle gemeldet.
                 </p>
               </CardContent>
             </Card>
