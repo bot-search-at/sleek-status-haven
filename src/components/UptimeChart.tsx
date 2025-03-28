@@ -19,13 +19,15 @@ interface UptimeChartProps {
   title?: string;
   days?: number;
   height?: number;
+  serviceId?: string | null; // Add serviceId as an optional prop
 }
 
 export function UptimeChart({ 
   data, 
   title = "Uptime", 
   days = 30,
-  height = 240
+  height = 240,
+  serviceId = null
 }: UptimeChartProps) {
   const { theme } = useTheme();
   const [chartData, setChartData] = useState<any[]>([]);
@@ -35,12 +37,14 @@ export function UptimeChart({
     const recentData = data.slice(-days);
     const formattedData = recentData.map(day => ({
       date: day.date,
-      uptime: day.uptime,
+      uptime: serviceId && day.services[serviceId] 
+        ? day.services[serviceId].uptime 
+        : day.uptime,
       formattedDate: format(new Date(day.date), "MMM d")
     }));
     
     setChartData(formattedData);
-  }, [data, days]);
+  }, [data, days, serviceId]); // Add serviceId to dependency array
 
   const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
   
@@ -50,7 +54,7 @@ export function UptimeChart({
         <CardTitle className="text-base">{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-[${height}px]">
+        <div className={`h-[${height}px]`}>
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart
               data={chartData}

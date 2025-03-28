@@ -48,6 +48,7 @@ export interface IncidentUpdate {
 }
 
 export interface UptimeDay {
+  id?: string; // Added id field as optional since it comes from the database
   date: string;
   uptime: number; // Percentage (0-100)
   services: {
