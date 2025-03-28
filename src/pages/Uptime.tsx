@@ -1,7 +1,6 @@
 
 import { useEffect, useState } from "react";
 import { PageLayout } from "@/components/PageLayout";
-import { mockUptimeData, mockServices } from "@/lib/mockData";
 import { UptimeChart } from "@/components/UptimeChart";
 import { Service, UptimeDay } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,37 +13,134 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatusDot } from "@/components/StatusDot";
+import { UptimeEditForm } from "@/components/UptimeEditForm";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/AuthContext";
 
 export default function Uptime() {
   const [uptimeData, setUptimeData] = useState<UptimeDay[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [timeRange, setTimeRange] = useState("30");
   const [selectedService, setSelectedService] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [currentUptimeDay, setCurrentUptimeDay] = useState<UptimeDay | null>(null);
+  const { toast } = useToast();
+  const { user } = useAuth();
   
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      // Fetch services
+      const { data: servicesData, error: servicesError } = await supabase
+        .from('services')
+        .select('*');
+      
+      if (servicesError) throw servicesError;
+      
+      // Map the data to match our type
+      const mappedServices: Service[] = servicesData.map(service => ({
+        id: service.id,
+        name: service.name,
+        description: service.description || '',
+        status: service.status,
+        group: service.service_group,
+        updatedAt: service.updated_at
+      }));
+      
+      setServices(mappedServices);
+      
+      // Fetch uptime data
+      const { data: uptimeDataResult, error: uptimeError } = await supabase
+        .from('uptime_data')
+        .select('*')
+        .order('date', { ascending: false });
+      
+      if (uptimeError) throw uptimeError;
+      
+      // Map the data to match our type
+      const mappedUptimeData: UptimeDay[] = uptimeDataResult.map(day => ({
+        date: day.date,
+        uptime: day.uptime as number,
+        services: day.services as Record<string, { uptime: number; incidents: string[] }>
+      }));
+      
+      setUptimeData(mappedUptimeData);
+      
+      // Find the uptime data for the selected date
+      const dayData = mappedUptimeData.find(day => day.date === selectedDate);
+      setCurrentUptimeDay(dayData || null);
+      
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      toast({
+        title: "Error fetching data",
+        description: "Could not load uptime data. Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      setUptimeData(mockUptimeData);
-      setServices(mockServices);
-    }, 500);
+    fetchData();
+    
+    // Set up realtime subscription for updates
+    const uptimeChannel = supabase
+      .channel('public:uptime_data')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'uptime_data' 
+      }, () => {
+        fetchData();
+      })
+      .subscribe();
+      
+    const servicesChannel = supabase
+      .channel('public:services')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'services' 
+      }, () => {
+        fetchData();
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(uptimeChannel);
+      supabase.removeChannel(servicesChannel);
+    };
   }, []);
 
+  useEffect(() => {
+    // Update current uptime day when selected date changes
+    const dayData = uptimeData.find(day => day.date === selectedDate);
+    setCurrentUptimeDay(dayData || null);
+  }, [selectedDate, uptimeData]);
+
   const getServiceUptime = (serviceId: string, days: number): number => {
-    const recentData = uptimeData.slice(-days);
+    const recentData = uptimeData.slice(0, days);
     if (recentData.length === 0) return 100;
     
     let totalUptime = 0;
+    let daysWithData = 0;
+    
     recentData.forEach(day => {
       if (day.services[serviceId]) {
         totalUptime += day.services[serviceId].uptime;
+        daysWithData++;
       }
     });
     
-    return totalUptime / recentData.length;
+    return daysWithData > 0 ? totalUptime / daysWithData : 100;
   };
 
   const getOverallUptime = (days: number): number => {
-    const recentData = uptimeData.slice(-days);
+    const recentData = uptimeData.slice(0, days);
     if (recentData.length === 0) return 100;
     
     let totalUptime = 0;
@@ -60,6 +156,10 @@ export default function Uptime() {
     { value: "30", label: "30 days" },
     { value: "90", label: "90 days" },
   ];
+
+  const handleDateSelect = (date: string) => {
+    setSelectedDate(date);
+  };
 
   return (
     <PageLayout>
@@ -92,6 +192,38 @@ export default function Uptime() {
           </div>
         </div>
         
+        <div className="mb-4 animate-fade-in flex justify-between items-center">
+          <Select 
+            value={selectedDate} 
+            onValueChange={handleDateSelect}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select date" />
+            </SelectTrigger>
+            <SelectContent>
+              {uptimeData.map(day => (
+                <SelectItem key={day.date} value={day.date}>
+                  {new Date(day.date).toLocaleDateString()}
+                </SelectItem>
+              ))}
+              {uptimeData.findIndex(day => day.date === selectedDate) === -1 && (
+                <SelectItem value={selectedDate}>
+                  {new Date(selectedDate).toLocaleDateString()} (New)
+                </SelectItem>
+              )}
+            </SelectContent>
+          </Select>
+          
+          {user && (
+            <UptimeEditForm 
+              date={selectedDate}
+              services={services}
+              uptimeData={currentUptimeDay}
+              onUptimeUpdated={fetchData}
+            />
+          )}
+        </div>
+        
         <div className="mb-8 animate-fade-in">
           <Card>
             <CardHeader className="pb-0">
@@ -107,6 +239,7 @@ export default function Uptime() {
                 data={uptimeData} 
                 days={parseInt(timeRange)}
                 height={300}
+                serviceId={selectedService}
               />
               
               <div className="mt-4 text-xs text-center text-muted-foreground">

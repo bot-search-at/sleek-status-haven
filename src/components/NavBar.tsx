@@ -7,10 +7,10 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/context/AuthContext";
+import { SubscribeDialog } from "@/components/SubscribeDialog";
 
 export function NavBar() {
   const location = useLocation();
-  const [isSubscribeOpen, setIsSubscribeOpen] = useState(false);
   const { user, signOut } = useAuth();
   
   const isActive = (path: string) => location.pathname === path;
@@ -51,15 +51,18 @@ export function NavBar() {
         <div className="flex items-center space-x-4">
           <ThemeToggle />
           
-          <Button
-            variant="outline"
-            size="sm"
-            className="hidden md:flex items-center gap-1"
-            onClick={() => setIsSubscribeOpen(true)}
-          >
-            <Bell className="h-4 w-4" />
-            <span>Subscribe</span>
-          </Button>
+          <SubscribeDialog 
+            trigger={
+              <Button
+                variant="outline"
+                size="sm"
+                className="hidden md:flex items-center gap-1"
+              >
+                <Bell className="h-4 w-4" />
+                <span>Subscribe</span>
+              </Button>
+            }
+          />
           
           {user ? (
             <div className="flex items-center space-x-2">
@@ -109,6 +112,16 @@ export function NavBar() {
                     {item.name}
                   </Link>
                 ))}
+                <SubscribeDialog 
+                  trigger={
+                    <button 
+                      className="flex items-center gap-2 px-2 py-1 rounded-md text-muted-foreground transition-colors hover:bg-secondary"
+                    >
+                      <Bell className="h-4 w-4" />
+                      <span>Subscribe</span>
+                    </button>
+                  }
+                />
                 {user ? (
                   <>
                     <Link

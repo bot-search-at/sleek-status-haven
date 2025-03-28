@@ -11,6 +11,7 @@ import { Link } from "react-router-dom";
 import { CheckCircle, AlertTriangle, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { SubscribeDialog } from "@/components/SubscribeDialog";
 
 export default function Index() {
   const [services, setServices] = useState<Service[]>([]);
@@ -287,9 +288,13 @@ export default function Index() {
               )}
               
               <div className="mt-4">
-                <Button variant="outline" size="sm" className="w-full" disabled>
-                  Subscribe to Updates
-                </Button>
+                <SubscribeDialog
+                  trigger={
+                    <Button variant="outline" size="sm" className="w-full">
+                      Subscribe to Updates
+                    </Button>
+                  }
+                />
               </div>
             </CardContent>
           </Card>
