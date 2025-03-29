@@ -27,15 +27,16 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const url = new URL(req.url);
-    const path = url.pathname.split('/').pop();
+    const requestData = await req.json().catch(() => ({}));
+    const action = requestData.action || '';
 
     // Endpoint to initialize and update services in Discord
-    if (path === 'update-status' && req.method === 'POST') {
+    if (action === 'update-status') {
       // Get bot configuration from database
       const { data: configData, error: configError } = await supabaseClient
         .from('discord_bot_config')
         .select('*')
+        .limit(1)
         .single();
 
       if (configError || !configData) {
@@ -185,8 +186,8 @@ serve(async (req) => {
     }
 
     // Endpoint to test the bot connection
-    if (path === 'test-connection' && req.method === 'POST') {
-      const { token, guild_id, channel_id } = await req.json();
+    if (action === 'test-connection') {
+      const { token, guild_id, channel_id } = requestData;
       
       try {
         // Test the connection by getting the bot's user information
@@ -240,8 +241,9 @@ serve(async (req) => {
       }
     }
 
+    // Default response for unknown endpoints
     return new Response(
-      JSON.stringify({ error: 'Invalid endpoint' }),
+      JSON.stringify({ error: 'Invalid action' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
     );
   } catch (error) {

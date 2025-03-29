@@ -83,15 +83,30 @@ export function DiscordBotConfig() {
         .map(id => id.trim())
         .filter(id => id.length > 0);
 
+      // First check if we already have a record
+      const { data: existingConfig } = await supabase
+        .from('discord_bot_config')
+        .select('id')
+        .limit(1);
+
+      let upsertData = {
+        token: values.token,
+        guild_ids: guildIdsArray,
+        status_channel_id: values.status_channel_id,
+        enabled: values.enabled,
+      };
+
+      // If we have an existing record, include its ID
+      if (existingConfig && existingConfig.length > 0) {
+        upsertData = {
+          ...upsertData,
+          id: existingConfig[0].id
+        };
+      }
+
       const { error } = await supabase
         .from('discord_bot_config')
-        .upsert({
-          id: 1, // Use a fixed ID so we always update the same row
-          token: values.token,
-          guild_ids: guildIdsArray,
-          status_channel_id: values.status_channel_id,
-          enabled: values.enabled,
-        });
+        .upsert(upsertData);
 
       if (error) {
         throw error;
@@ -123,6 +138,7 @@ export function DiscordBotConfig() {
       const response = await supabase.functions.invoke('discord-bot', {
         method: 'POST',
         body: {
+          action: 'test-connection',
           token: values.token,
           guild_id: values.guild_ids.split(',')[0]?.trim(),
           channel_id: values.status_channel_id
@@ -179,7 +195,9 @@ export function DiscordBotConfig() {
     try {
       const response = await supabase.functions.invoke('discord-bot', {
         method: 'POST',
-        body: {},
+        body: {
+          action: 'update-status'
+        },
         headers: {
           'Content-Type': 'application/json',
         },
