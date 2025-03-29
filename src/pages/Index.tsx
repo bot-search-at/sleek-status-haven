@@ -8,10 +8,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { CheckCircle, AlertTriangle, Clock } from "lucide-react";
+import { CheckCircle, AlertTriangle, Clock, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { SubscribeDialog } from "@/components/SubscribeDialog";
+import { DiscordBotStatus } from "@/components/DiscordBotStatus";
 
 export default function Index() {
   const [services, setServices] = useState<Service[]>([]);
@@ -20,6 +21,7 @@ export default function Index() {
   const [serviceGroups, setServiceGroups] = useState<Record<string, Service[]>>({});
   const [systemStatus, setSystemStatus] = useState<"operational" | "degraded" | "outage">("operational");
   const [isLoading, setIsLoading] = useState(true);
+  const [showDiscordStatus, setShowDiscordStatus] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -263,41 +265,66 @@ export default function Index() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Geplante Wartung</CardTitle>
-              <CardDescription>Anstehende geplante Wartungen</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {services.filter(s => s.status === "maintenance").length > 0 ? (
-                <div className="space-y-4">
-                  {services.filter(s => s.status === "maintenance").map(service => (
-                    <div key={service.id} className="flex items-start space-x-3">
-                      <Clock className="mt-0.5 h-4 w-4 text-status-maintenance" />
-                      <div>
-                        <p className="text-sm font-medium">{service.name} Wartung</p>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(service.updatedAt).toLocaleDateString()}
-                        </p>
+          {showDiscordStatus ? (
+            <DiscordBotStatus services={services} />
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Geplante Wartung</CardTitle>
+                <CardDescription>Anstehende geplante Wartungen</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {services.filter(s => s.status === "maintenance").length > 0 ? (
+                  <div className="space-y-4">
+                    {services.filter(s => s.status === "maintenance").map(service => (
+                      <div key={service.id} className="flex items-start space-x-3">
+                        <Clock className="mt-0.5 h-4 w-4 text-status-maintenance" />
+                        <div>
+                          <p className="text-sm font-medium">{service.name} Wartung</p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(service.updatedAt).toLocaleDateString()}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Keine geplante Wartung</p>
+                )}
+                
+                <div className="mt-4">
+                  <SubscribeDialog
+                    trigger={
+                      <Button variant="outline" size="sm" className="w-full">
+                        Updates abonnieren
+                      </Button>
+                    }
+                  />
                 </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">Keine geplante Wartung</p>
-              )}
-              
-              <div className="mt-4">
-                <SubscribeDialog
-                  trigger={
-                    <Button variant="outline" size="sm" className="w-full">
-                      Updates abonnieren
-                    </Button>
-                  }
-                />
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        <div className="mt-6 flex justify-center">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setShowDiscordStatus(!showDiscordStatus)}
+            className="text-muted-foreground flex items-center"
+          >
+            {showDiscordStatus ? (
+              <>
+                <ChevronUp className="mr-1 h-4 w-4" />
+                Discord Status ausblenden
+              </>
+            ) : (
+              <>
+                <ChevronDown className="mr-1 h-4 w-4" />
+                Discord Status anzeigen
+              </>
+            )}
+          </Button>
         </div>
       </div>
     </PageLayout>

@@ -49,6 +49,9 @@
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    --discord-blurple: 235 86% 65%;
+    --discord-green: 139 47% 44%;
   }
 
   .dark {
@@ -94,6 +97,9 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    --discord-blurple: 235 86% 65%;
+    --discord-green: 139 47% 44%;
   }
 
   * {
@@ -166,6 +172,23 @@
 
   .status-badge-maintenance {
     @apply bg-status-maintenance/20 text-status-maintenance;
+  }
+
+  /* Discord-specific styling */
+  .border-discord-blurple {
+    @apply border-[hsl(var(--discord-blurple))];
+  }
+
+  .text-discord-blurple {
+    @apply text-[hsl(var(--discord-blurple))];
+  }
+
+  .bg-discord-blurple {
+    @apply bg-[hsl(var(--discord-blurple))];
+  }
+
+  .discord-card {
+    @apply border-l-4 border-discord-blurple transition-all duration-300;
   }
 }
 
