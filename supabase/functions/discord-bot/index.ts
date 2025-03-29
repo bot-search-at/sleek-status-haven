@@ -124,7 +124,7 @@ serve(async (req) => {
           .select('*')
           .order('created_at', { ascending: false })
           .limit(1)
-          .single();
+          .maybeSingle(); // Using maybeSingle instead of single to prevent error when no message exists
 
         const headers = {
           'Authorization': `Bot ${botConfig.token}`,
@@ -189,7 +189,23 @@ serve(async (req) => {
     if (action === 'test-connection') {
       const { token, guild_id, channel_id } = requestData;
       
+      if (!token) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Bot token is required' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+      
+      if (!channel_id) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Channel ID is required' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+      
       try {
+        console.log('Testing Discord connection with token and channel:', token.substring(0, 5) + '...', channel_id);
+        
         // Test the connection by getting the bot's user information
         const botResponse = await fetch('https://discord.com/api/v10/users/@me', {
           headers: {
@@ -198,13 +214,15 @@ serve(async (req) => {
         });
         
         if (!botResponse.ok) {
+          console.error('Bot authentication failed:', await botResponse.text());
           return new Response(
             JSON.stringify({ success: false, error: 'Invalid bot token' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 } // Return 200 with error info for the frontend
           );
         }
         
         const botData = await botResponse.json();
+        console.log('Bot data retrieved:', botData);
         
         // Check if channel exists and we have permission to post in it
         const channelResponse = await fetch(`https://discord.com/api/v10/channels/${channel_id}`, {
@@ -214,16 +232,18 @@ serve(async (req) => {
         });
         
         if (!channelResponse.ok) {
+          console.error('Channel access failed:', await channelResponse.text());
           return new Response(
             JSON.stringify({ 
               success: false, 
               error: 'Channel not found or bot does not have access to it',
               bot: botData
             }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 } // Return 200 with error info for the frontend
           );
         }
         
+        console.log('Connection test successful');
         return new Response(
           JSON.stringify({ 
             success: true, 
@@ -235,8 +255,8 @@ serve(async (req) => {
       } catch (error) {
         console.error('Error testing Discord connection:', error);
         return new Response(
-          JSON.stringify({ success: false, error: 'Failed to test Discord connection' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+          JSON.stringify({ success: false, error: 'Failed to test Discord connection: ' + error.message }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 } // Return 200 with error info for the frontend
         );
       }
     }
@@ -249,8 +269,8 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error:', error);
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      JSON.stringify({ error: 'Internal server error', details: error.message }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 } // Return 200 with error info for the frontend
     );
   }
 });
