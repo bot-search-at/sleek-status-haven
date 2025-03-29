@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -83,10 +84,11 @@ export function DiscordBotConfig() {
         .map(id => id.trim())
         .filter(id => id.length > 0);
 
-      // Our trigger will automatically set id=1, so we don't need to worry about it
+      // We need to provide id=1 as per our database schema requirement
       const { error } = await supabase
         .from('discord_bot_config')
         .upsert({
+          id: 1, // Explicitly set id to 1 as it's required
           token: values.token,
           guild_ids: guildIdsArray,
           status_channel_id: values.status_channel_id,
