@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -44,6 +43,7 @@ export function DiscordBotConfig() {
         const { data, error } = await supabase
           .from('discord_bot_config')
           .select('*')
+          .limit(1)
           .single();
 
         if (error) {
@@ -83,30 +83,16 @@ export function DiscordBotConfig() {
         .map(id => id.trim())
         .filter(id => id.length > 0);
 
-      // First check if we already have a record
-      const { data: existingConfig } = await supabase
-        .from('discord_bot_config')
-        .select('id')
-        .limit(1);
-
-      let upsertData = {
-        token: values.token,
-        guild_ids: guildIdsArray,
-        status_channel_id: values.status_channel_id,
-        enabled: values.enabled,
-      };
-
-      // If we have an existing record, include its ID
-      if (existingConfig && existingConfig.length > 0) {
-        upsertData = {
-          ...upsertData,
-          id: existingConfig[0].id
-        };
-      }
-
+      // Our trigger will automatically set id=1, so we don't need to worry about it
       const { error } = await supabase
         .from('discord_bot_config')
-        .upsert(upsertData);
+        .upsert({
+          token: values.token,
+          guild_ids: guildIdsArray,
+          status_channel_id: values.status_channel_id,
+          enabled: values.enabled,
+          updated_at: new Date().toISOString()
+        });
 
       if (error) {
         throw error;

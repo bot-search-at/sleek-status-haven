@@ -150,7 +150,7 @@ export interface Database extends SupabaseDatabase {
           updated_at: string | null;
         };
         Insert: {
-          id?: number;
+          id?: number; // Make id optional, the trigger will handle it
           token: string;
           guild_ids?: string[];
           status_channel_id: string;
