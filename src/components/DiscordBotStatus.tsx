@@ -27,7 +27,7 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
           .single();
 
         if (!configError && configData) {
-          setBotEnabled(configData.enabled);
+          setBotEnabled(configData.enabled || false);
         }
 
         // Get last message timestamp
@@ -133,7 +133,7 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <span className="text-sm font-medium">Bot Status</span>
-            <Badge variant={botEnabled ? "success" : "secondary"} className="h-6">
+            <Badge variant={botEnabled ? "default" : "secondary"} className="h-6">
               {botEnabled ? (
                 <CheckCircle className="mr-1 h-3 w-3" />
               ) : (
@@ -154,8 +154,8 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
                 <span className="text-sm font-medium">Systemstatus</span>
                 <Badge 
                   variant={
-                    systemStatus === "operational" ? "success" : 
-                    systemStatus === "degraded" ? "warning" : "destructive"
+                    systemStatus === "operational" ? "default" : 
+                    systemStatus === "degraded" ? "outline" : "destructive"
                   }
                   className="h-6"
                 >

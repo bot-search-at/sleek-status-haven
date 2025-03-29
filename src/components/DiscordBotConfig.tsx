@@ -127,15 +127,16 @@ export function DiscordBotConfig() {
           guild_id: values.guild_ids.split(',')[0]?.trim(),
           channel_id: values.status_channel_id
         },
-        responseType: 'json',
-        path: 'test-connection'
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
 
       if (response.error) {
         throw new Error(response.error.message || "Connection test failed");
       }
 
-      if (response.data.success) {
+      if (response.data?.success) {
         setBotStatus({
           success: true,
           message: "Verbindung erfolgreich hergestellt!",
@@ -148,11 +149,11 @@ export function DiscordBotConfig() {
       } else {
         setBotStatus({
           success: false,
-          message: response.data.error || "Fehler bei der Verbindung"
+          message: response.data?.error || "Fehler bei der Verbindung"
         });
         toast({
           title: "Verbindungstest fehlgeschlagen",
-          description: response.data.error,
+          description: response.data?.error,
           variant: "destructive",
         });
       }
@@ -179,8 +180,9 @@ export function DiscordBotConfig() {
       const response = await supabase.functions.invoke('discord-bot', {
         method: 'POST',
         body: {},
-        responseType: 'json',
-        path: 'update-status'
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
 
       if (response.error) {

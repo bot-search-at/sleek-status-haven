@@ -27,6 +27,60 @@ export type Database = {
         }
         Relationships: []
       }
+      discord_bot_config: {
+        Row: {
+          created_at: string | null
+          enabled: boolean | null
+          guild_ids: string[] | null
+          id: number
+          status_channel_id: string
+          token: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          enabled?: boolean | null
+          guild_ids?: string[] | null
+          id: number
+          status_channel_id: string
+          token: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          enabled?: boolean | null
+          guild_ids?: string[] | null
+          id?: number
+          status_channel_id?: string
+          token?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      discord_status_messages: {
+        Row: {
+          channel_id: string
+          content: string
+          created_at: string | null
+          id: string
+          message_id: string
+        }
+        Insert: {
+          channel_id: string
+          content: string
+          created_at?: string | null
+          id?: string
+          message_id: string
+        }
+        Update: {
+          channel_id?: string
+          content?: string
+          created_at?: string | null
+          id?: string
+          message_id?: string
+        }
+        Relationships: []
+      }
       incident_updates: {
         Row: {
           created_at: string

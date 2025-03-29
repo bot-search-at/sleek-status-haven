@@ -139,6 +139,60 @@ export interface Database extends SupabaseDatabase {
         };
         Relationships: [];
       };
+      discord_bot_config: {
+        Row: {
+          id: number;
+          token: string;
+          guild_ids: string[];
+          status_channel_id: string;
+          enabled: boolean | null;
+          created_at: string | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          id: number;
+          token: string;
+          guild_ids?: string[];
+          status_channel_id: string;
+          enabled?: boolean | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: number;
+          token?: string;
+          guild_ids?: string[];
+          status_channel_id?: string;
+          enabled?: boolean | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Relationships: [];
+      };
+      discord_status_messages: {
+        Row: {
+          id: string;
+          message_id: string;
+          channel_id: string;
+          content: string;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          message_id: string;
+          channel_id: string;
+          content: string;
+          created_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          message_id?: string;
+          channel_id?: string;
+          content?: string;
+          created_at?: string | null;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;
