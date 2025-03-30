@@ -30,6 +30,11 @@ serve(async (req) => {
     const requestData = await req.json().catch(() => ({}));
     const action = requestData.action || '';
 
+    console.log('Received action:', action, 'with data:', JSON.stringify({
+      ...requestData,
+      token: requestData.token ? '***REDACTED***' : undefined
+    }));
+
     // Endpoint to initialize and update services in Discord
     if (action === 'update-status') {
       // Get bot configuration from database
@@ -42,16 +47,28 @@ serve(async (req) => {
       if (configError || !configData) {
         console.error('Error fetching bot config:', configError);
         return new Response(
-          JSON.stringify({ error: 'Bot configuration not found' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
+          JSON.stringify({ error: 'Bot configuration not found', details: configError?.message }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         );
       }
 
       const botConfig = configData as BotConfig;
       
       if (!botConfig.enabled) {
+        console.log('Bot is disabled, not sending status update');
         return new Response(
           JSON.stringify({ message: 'Bot is disabled' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        );
+      }
+
+      if (!botConfig.token || !botConfig.status_channel_id) {
+        console.error('Missing required bot configuration:', {
+          hasToken: !!botConfig.token,
+          hasChannelId: !!botConfig.status_channel_id,
+        });
+        return new Response(
+          JSON.stringify({ error: 'Incomplete bot configuration' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         );
       }
@@ -64,8 +81,8 @@ serve(async (req) => {
       if (servicesError) {
         console.error('Error fetching services:', servicesError);
         return new Response(
-          JSON.stringify({ error: 'Failed to fetch services' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+          JSON.stringify({ error: 'Failed to fetch services', details: servicesError.message }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         );
       }
 
@@ -118,6 +135,8 @@ serve(async (req) => {
       
       // Send message to Discord
       try {
+        console.log('Preparing to send status update to Discord');
+        
         // Check if we have an existing message to update
         const { data: lastMessage, error: lastMessageError } = await supabaseClient
           .from('discord_status_messages')
@@ -126,61 +145,91 @@ serve(async (req) => {
           .limit(1)
           .maybeSingle(); // Using maybeSingle instead of single to prevent error when no message exists
 
+        if (lastMessageError) {
+          console.error('Error fetching last message:', lastMessageError);
+        }
+
         const headers = {
           'Authorization': `Bot ${botConfig.token}`,
           'Content-Type': 'application/json',
         };
 
         let response;
+        let discordApiUrl;
         
         // If we have a recent message, update it instead of creating a new one
         if (!lastMessageError && lastMessage && (Date.now() - new Date(lastMessage.created_at).getTime()) < 86400000) { // 24 hours
-          const updateUrl = `https://discord.com/api/v10/channels/${botConfig.status_channel_id}/messages/${lastMessage.message_id}`;
-          response = await fetch(updateUrl, {
+          discordApiUrl = `https://discord.com/api/v10/channels/${botConfig.status_channel_id}/messages/${lastMessage.message_id}`;
+          console.log(`Updating existing message: ${lastMessage.message_id} in channel: ${botConfig.status_channel_id}`);
+          
+          response = await fetch(discordApiUrl, {
             method: 'PATCH',
             headers,
             body: JSON.stringify({ content: messageContent }),
           });
         } else {
           // Send a new message
-          const sendUrl = `https://discord.com/api/v10/channels/${botConfig.status_channel_id}/messages`;
-          response = await fetch(sendUrl, {
+          discordApiUrl = `https://discord.com/api/v10/channels/${botConfig.status_channel_id}/messages`;
+          console.log(`Sending new message to channel: ${botConfig.status_channel_id}`);
+          
+          response = await fetch(discordApiUrl, {
             method: 'POST',
             headers,
             body: JSON.stringify({ content: messageContent }),
           });
-
-          // If successful, store the message ID
-          if (response.ok) {
-            const messageData = await response.json();
-            await supabaseClient
-              .from('discord_status_messages')
-              .insert({
-                message_id: messageData.id,
-                channel_id: botConfig.status_channel_id,
-                content: messageContent
-              });
-          }
         }
 
+        console.log(`Discord API response status: ${response.status}`);
+        
         if (!response.ok) {
-          const errorData = await response.json();
+          const errorData = await response.json().catch(() => ({}));
           console.error('Discord API error:', errorData);
           return new Response(
-            JSON.stringify({ error: 'Discord API error', details: errorData }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+            JSON.stringify({ 
+              error: 'Discord API error', 
+              details: errorData,
+              url: discordApiUrl,
+              statusCode: response.status,
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
           );
         }
 
+        const responseData = await response.json();
+        console.log('Discord API success, message ID:', responseData.id);
+
+        // If successful and it's a new message, store the message ID
+        if (response.ok && (!lastMessage || (Date.now() - new Date(lastMessage.created_at).getTime()) >= 86400000)) {
+          const { error: insertError } = await supabaseClient
+            .from('discord_status_messages')
+            .insert({
+              message_id: responseData.id,
+              channel_id: botConfig.status_channel_id,
+              content: messageContent
+            });
+
+          if (insertError) {
+            console.error('Error storing message ID:', insertError);
+          }
+        }
+
         return new Response(
-          JSON.stringify({ success: true, message: 'Status update sent to Discord' }),
+          JSON.stringify({ 
+            success: true, 
+            message: 'Status update sent to Discord',
+            messageId: responseData.id
+          }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         );
       } catch (error) {
         console.error('Error sending to Discord:', error);
         return new Response(
-          JSON.stringify({ error: 'Failed to send status to Discord' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+          JSON.stringify({ 
+            error: 'Failed to send status to Discord', 
+            details: error.message,
+            stack: error.stack
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         );
       }
     }
@@ -214,9 +263,15 @@ serve(async (req) => {
         });
         
         if (!botResponse.ok) {
-          console.error('Bot authentication failed:', await botResponse.text());
+          const errorText = await botResponse.text();
+          console.error('Bot authentication failed:', errorText);
           return new Response(
-            JSON.stringify({ success: false, error: 'Invalid bot token' }),
+            JSON.stringify({ 
+              success: false, 
+              error: 'Invalid bot token', 
+              details: errorText,
+              statusCode: botResponse.status
+            }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 } // Return 200 with error info for the frontend
           );
         }
@@ -232,30 +287,42 @@ serve(async (req) => {
         });
         
         if (!channelResponse.ok) {
-          console.error('Channel access failed:', await channelResponse.text());
+          const errorText = await channelResponse.text();
+          console.error('Channel access failed:', errorText);
           return new Response(
             JSON.stringify({ 
               success: false, 
               error: 'Channel not found or bot does not have access to it',
+              details: errorText,
+              statusCode: channelResponse.status,
               bot: botData
             }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 } // Return 200 with error info for the frontend
           );
         }
         
+        const channelData = await channelResponse.json();
+        console.log('Channel data retrieved:', channelData);
+        
         console.log('Connection test successful');
         return new Response(
           JSON.stringify({ 
             success: true, 
             message: 'Bot connection successful', 
-            bot: botData 
+            bot: botData,
+            channel: channelData
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         );
       } catch (error) {
         console.error('Error testing Discord connection:', error);
         return new Response(
-          JSON.stringify({ success: false, error: 'Failed to test Discord connection: ' + error.message }),
+          JSON.stringify({ 
+            success: false, 
+            error: 'Failed to test Discord connection', 
+            details: error.message,
+            stack: error.stack
+          }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 } // Return 200 with error info for the frontend
         );
       }
@@ -269,7 +336,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error:', error);
     return new Response(
-      JSON.stringify({ error: 'Internal server error', details: error.message }),
+      JSON.stringify({ error: 'Internal server error', details: error.message, stack: error.stack }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 } // Return 200 with error info for the frontend
     );
   }
