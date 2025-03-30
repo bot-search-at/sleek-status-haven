@@ -3,8 +3,10 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Service } from "@/lib/types";
-import { AlertTriangle, CheckCircle, Clock, MessageSquare, Activity } from "lucide-react";
+import { AlertTriangle, CheckCircle, Clock, MessageSquare, Activity, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/use-toast";
 
 interface DiscordBotStatusProps {
   services: Service[];
@@ -15,6 +17,8 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [responseTime, setResponseTime] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSending, setIsSending] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     const loadBotStatus = async () => {
@@ -24,7 +28,7 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
         const { data: configData, error: configError } = await supabase
           .from('discord_bot_config')
           .select('enabled')
-          .single();
+          .maybeSingle();
 
         if (!configError && configData) {
           setBotEnabled(configData.enabled || false);
@@ -36,7 +40,7 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
           .select('created_at')
           .order('created_at', { ascending: false })
           .limit(1)
-          .single();
+          .maybeSingle();
 
         if (!messageError && messageData) {
           setLastUpdated(messageData.created_at);
@@ -102,6 +106,49 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
       hour: '2-digit',
       minute: '2-digit'
     }).format(date);
+  };
+
+  // Send a manual status update
+  const sendStatusUpdate = async () => {
+    setIsSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('discord-bot', {
+        body: { action: 'update-status' }
+      });
+      
+      if (error) {
+        console.error("Error sending status update:", error);
+        toast({
+          title: "Fehler beim Senden des Status-Updates",
+          description: error.message,
+          variant: "destructive"
+        });
+      } else if (data.error) {
+        console.error("API returned error:", data.error);
+        toast({
+          title: "Fehler beim Senden des Status-Updates",
+          description: data.error,
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Status-Update gesendet",
+          description: "Der Status wurde erfolgreich an Discord gesendet.",
+          variant: "default"
+        });
+        // Refresh the status after sending
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error("Exception sending status update:", error);
+      toast({
+        title: "Fehler beim Senden des Status-Updates",
+        description: "Ein unerwarteter Fehler ist aufgetreten.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSending(false);
+    }
   };
 
   if (isLoading) {
@@ -180,6 +227,19 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
               </div>
             </>
           )}
+
+          <div className="border-t pt-3 mt-3">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="w-full flex items-center justify-center" 
+              onClick={sendStatusUpdate}
+              disabled={isSending || !botEnabled}
+            >
+              <Send className="mr-2 h-4 w-4" />
+              {isSending ? "Senden..." : "Manuelles Update senden"}
+            </Button>
+          </div>
 
           <div className="pt-2 text-xs text-center text-muted-foreground">
             {botEnabled 
