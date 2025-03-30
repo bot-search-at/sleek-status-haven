@@ -38,13 +38,33 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const requestData = await req.json().catch(() => ({}));
-    const action = requestData.action || '';
+    // Parse request body
+    let requestData = {};
+    try {
+      requestData = await req.json();
+    } catch (e) {
+      console.error("Failed to parse request JSON:", e);
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+
+    // Extract action from request data
+    const action = requestData?.action || '';
 
     console.log('Received action:', action, 'with data:', JSON.stringify({
       ...requestData,
-      token: requestData.token ? '***REDACTED***' : undefined
+      token: requestData?.token ? '***REDACTED***' : undefined
     }));
+
+    if (!action) {
+      console.error('No action specified in request');
+      return new Response(
+        JSON.stringify({ error: 'No action specified in request' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
 
     // Endpoint to initialize and update services in Discord
     if (action === 'update-status') {
@@ -131,7 +151,7 @@ serve(async (req) => {
       };
 
       // Group services by their group
-      const serviceGroups = {};
+      const serviceGroups: Record<string, any[]> = {};
       services.forEach(service => {
         if (!serviceGroups[service.service_group]) {
           serviceGroups[service.service_group] = [];
@@ -145,7 +165,7 @@ serve(async (req) => {
       Object.entries(serviceGroups).forEach(([group, groupServices]) => {
         let fieldValue = '';
         groupServices.forEach(service => {
-          const emoji = statusEmojis[service.status] || "❓";
+          const emoji = statusEmojis[service.status as keyof typeof statusEmojis] || "❓";
           const statusText = service.status === "operational" ? "Betriebsbereit" : 
                            service.status === "degraded" ? "Beeinträchtigt" : 
                            service.status === "partial_outage" ? "Teilausfall" : 
@@ -166,7 +186,7 @@ serve(async (req) => {
         title: systemStatus === "operational" ? "Alle Systeme betriebsbereit" : 
                systemStatus === "degraded" ? "Einige Systeme beeinträchtigt" : "Systemausfall erkannt",
         description: "Aktuelle Status-Informationen zu allen Diensten",
-        color: statusColors[systemStatus] || 0x5865F2,
+        color: statusColors[systemStatus as keyof typeof statusColors] || 0x5865F2,
         fields: embedFields,
         footer: {
           text: `Letztes Update: ${new Date().toLocaleString('de-DE')} • Weitere Details auf lovable.dev`
@@ -269,7 +289,7 @@ serve(async (req) => {
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         );
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error sending to Discord:', error);
         return new Response(
           JSON.stringify({ 
@@ -284,7 +304,7 @@ serve(async (req) => {
 
     // Endpoint to test the bot connection
     if (action === 'test-connection') {
-      const { token, guild_id, channel_id } = requestData;
+      const { token, guild_id, channel_id } = requestData as any;
       
       if (!token) {
         return new Response(
@@ -423,7 +443,7 @@ serve(async (req) => {
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         );
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error testing Discord connection:', error);
         return new Response(
           JSON.stringify({ 
@@ -439,7 +459,7 @@ serve(async (req) => {
 
     // New endpoint to send a custom announcement
     if (action === 'send-announcement') {
-      const { title, content, color } = requestData;
+      const { title, content, color } = requestData as any;
       
       if (!title || !content) {
         return new Response(
@@ -521,7 +541,7 @@ serve(async (req) => {
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         );
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error sending announcement to Discord:', error);
         return new Response(
           JSON.stringify({ 
@@ -536,10 +556,10 @@ serve(async (req) => {
 
     // Default response for unknown endpoints
     return new Response(
-      JSON.stringify({ error: 'Invalid action' }),
+      JSON.stringify({ error: 'Invalid action', providedAction: action }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error:', error);
     return new Response(
       JSON.stringify({ error: 'Internal server error', details: error.message, stack: error.stack }),

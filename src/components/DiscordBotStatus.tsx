@@ -112,9 +112,18 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
   const sendStatusUpdate = async () => {
     setIsSending(true);
     try {
+      // Ensure we're sending the correct action parameter
       const { data, error } = await supabase.functions.invoke('discord-bot', {
-        body: { action: 'update-status' }
+        method: 'POST',
+        body: { 
+          action: 'update-status' 
+        },
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
+      
+      console.log("Response from Discord bot function:", data, error);
       
       if (error) {
         console.error("Error sending status update:", error);
@@ -123,7 +132,7 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
           description: error.message,
           variant: "destructive"
         });
-      } else if (data.error) {
+      } else if (data?.error) {
         console.error("API returned error:", data.error);
         toast({
           title: "Fehler beim Senden des Status-Updates",
@@ -139,7 +148,7 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
         // Refresh the status after sending
         window.location.reload();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Exception sending status update:", error);
       toast({
         title: "Fehler beim Senden des Status-Updates",
