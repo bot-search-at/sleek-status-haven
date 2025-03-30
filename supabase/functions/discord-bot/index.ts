@@ -82,51 +82,51 @@ serve(async (req) => {
       );
     }
 
+    // Get bot configuration from database (for all actions)
+    const { data: configData, error: configError } = await supabaseClient
+      .from('discord_bot_config')
+      .select('*')
+      .maybeSingle();
+
+    if (configError) {
+      console.error('Error fetching bot config:', configError);
+      return new Response(
+        JSON.stringify({ error: 'Bot-Konfiguration nicht gefunden', details: configError?.message }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+
+    if (!configData) {
+      console.error('No bot configuration found');
+      return new Response(
+        JSON.stringify({ error: 'Bot-Konfiguration nicht gefunden' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+
+    const botConfig = configData as BotConfig;
+    
+    if (!botConfig.enabled) {
+      console.log('Bot is disabled, not sending status update');
+      return new Response(
+        JSON.stringify({ message: 'Bot ist deaktiviert' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+
+    if (!botConfig.token || !botConfig.status_channel_id) {
+      console.error('Missing required bot configuration:', {
+        hasToken: !!botConfig.token,
+        hasChannelId: !!botConfig.status_channel_id,
+      });
+      return new Response(
+        JSON.stringify({ error: 'Unvollständige Bot-Konfiguration' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+
     // Endpoint to initialize and update services in Discord
     if (action === 'update-status') {
-      // Get bot configuration from database
-      const { data: configData, error: configError } = await supabaseClient
-        .from('discord_bot_config')
-        .select('*')
-        .maybeSingle();
-
-      if (configError) {
-        console.error('Error fetching bot config:', configError);
-        return new Response(
-          JSON.stringify({ error: 'Bot-Konfiguration nicht gefunden', details: configError?.message }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-        );
-      }
-
-      if (!configData) {
-        console.error('No bot configuration found');
-        return new Response(
-          JSON.stringify({ error: 'Bot-Konfiguration nicht gefunden' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-        );
-      }
-
-      const botConfig = configData as BotConfig;
-      
-      if (!botConfig.enabled) {
-        console.log('Bot is disabled, not sending status update');
-        return new Response(
-          JSON.stringify({ message: 'Bot ist deaktiviert' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-        );
-      }
-
-      if (!botConfig.token || !botConfig.status_channel_id) {
-        console.error('Missing required bot configuration:', {
-          hasToken: !!botConfig.token,
-          hasChannelId: !!botConfig.status_channel_id,
-        });
-        return new Response(
-          JSON.stringify({ error: 'Unvollständige Bot-Konfiguration' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-        );
-      }
-
       // Fetch all services
       const { data: services, error: servicesError } = await supabaseClient
         .from('services')
@@ -198,14 +198,16 @@ serve(async (req) => {
       });
 
       // Create main embed
+      const statusTitle = systemStatus === "operational" ? "Alle Systeme betriebsbereit" : 
+               systemStatus === "degraded" ? "Einige Systeme beeinträchtigt" : "Systemausfall erkannt";
+
       const mainEmbed: DiscordEmbed = {
-        title: systemStatus === "operational" ? "Alle Systeme betriebsbereit" : 
-               systemStatus === "degraded" ? "Einige Systeme beeinträchtigt" : "Systemausfall erkannt",
+        title: statusTitle,
         description: "Aktuelle Status-Informationen zu allen Diensten",
         color: statusColors[systemStatus as keyof typeof statusColors] || 0x5865F2,
         fields: embedFields,
         footer: {
-          text: `Letztes Update: ${new Date().toLocaleString('de-DE')} • Weitere Details auf lovable.dev`
+          text: `Letztes Update: ${new Date().toLocaleString('de-DE')} • Weitere Details auf der Statusseite`
         },
         timestamp: new Date().toISOString()
       };
@@ -322,27 +324,30 @@ serve(async (req) => {
     if (action === 'test-connection') {
       const { token, guild_id, channel_id } = requestData;
       
-      if (!token) {
+      if (!token && !botConfig.token) {
         return new Response(
           JSON.stringify({ success: false, error: 'Bot-Token ist erforderlich' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         );
       }
       
-      if (!channel_id) {
+      if (!channel_id && !botConfig.status_channel_id) {
         return new Response(
           JSON.stringify({ success: false, error: 'Channel-ID ist erforderlich' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         );
       }
+
+      const botToken = token || botConfig.token;
+      const channelId = channel_id || botConfig.status_channel_id;
       
       try {
-        console.log('Testing Discord connection with token and channel:', token.substring(0, 5) + '...', channel_id);
+        console.log('Testing Discord connection with token and channel:', botToken.substring(0, 5) + '...', channelId);
         
         // Test the connection by getting the bot's user information
         const botResponse = await fetch('https://discord.com/api/v10/users/@me', {
           headers: {
-            'Authorization': `Bot ${token}`
+            'Authorization': `Bot ${botToken}`
           }
         });
         
@@ -370,9 +375,9 @@ serve(async (req) => {
         }
         
         // Check if channel exists and we have permission to post in it
-        const channelResponse = await fetch(`https://discord.com/api/v10/channels/${channel_id}`, {
+        const channelResponse = await fetch(`https://discord.com/api/v10/channels/${channelId}`, {
           headers: {
-            'Authorization': `Bot ${token}`
+            'Authorization': `Bot ${botToken}`
           }
         });
         
@@ -411,10 +416,10 @@ serve(async (req) => {
           timestamp: new Date().toISOString()
         };
         
-        const testResponse = await fetch(`https://discord.com/api/v10/channels/${channel_id}/messages`, {
+        const testResponse = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bot ${token}`,
+            'Authorization': `Bot ${botToken}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
@@ -484,30 +489,6 @@ serve(async (req) => {
         );
       }
       
-      // Get bot configuration from database
-      const { data: configData, error: configError } = await supabaseClient
-        .from('discord_bot_config')
-        .select('*')
-        .maybeSingle();
-
-      if (configError || !configData) {
-        console.error('Error fetching bot config:', configError);
-        return new Response(
-          JSON.stringify({ error: 'Bot-Konfiguration nicht gefunden', details: configError?.message }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-        );
-      }
-
-      const botConfig = configData as BotConfig;
-      
-      if (!botConfig.enabled) {
-        console.log('Bot is disabled, not sending announcement');
-        return new Response(
-          JSON.stringify({ message: 'Bot ist deaktiviert' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-        );
-      }
-
       // Create announcement embed
       const announcementEmbed: DiscordEmbed = {
         title: title,
@@ -564,6 +545,54 @@ serve(async (req) => {
             error: 'Fehler beim Senden der Ankündigung an Discord', 
             details: error.message,
             stack: error.stack
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        );
+      }
+    }
+
+    // Endpoint to check bot status
+    if (action === 'check-status') {
+      try {
+        // Check if the bot is online by calling the Discord API
+        const botResponse = await fetch('https://discord.com/api/v10/users/@me', {
+          headers: {
+            'Authorization': `Bot ${botConfig.token}`
+          }
+        });
+        
+        if (!botResponse.ok) {
+          return new Response(
+            JSON.stringify({ 
+              online: false, 
+              error: 'Bot ist nicht verbunden',
+              statusCode: botResponse.status
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+          );
+        }
+        
+        const botData = await botResponse.json();
+        
+        return new Response(
+          JSON.stringify({ 
+            online: true, 
+            message: 'Bot ist online',
+            bot: {
+              username: botData.username,
+              discriminator: botData.discriminator,
+              id: botData.id
+            }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        );
+      } catch (error: any) {
+        console.error('Error checking bot status:', error);
+        return new Response(
+          JSON.stringify({ 
+            online: false, 
+            error: 'Fehler beim Überprüfen des Bot-Status', 
+            details: error.message
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         );

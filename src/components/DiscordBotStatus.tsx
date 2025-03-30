@@ -3,10 +3,10 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Service } from "@/lib/types";
-import { AlertTriangle, CheckCircle, Clock, MessageSquare, Activity, Send, Info, Bell } from "lucide-react";
+import { AlertTriangle, CheckCircle, Clock, MessageSquare, Activity, Send, Info, Bell, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface DiscordBotStatusProps {
@@ -19,43 +19,74 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
   const [responseTime, setResponseTime] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [isOnline, setIsOnline] = useState<boolean | null>(null);
+  const [isChecking, setIsChecking] = useState(false);
+  const [botInfo, setBotInfo] = useState<{ username?: string; discriminator?: string } | null>(null);
   const { toast } = useToast();
 
-  useEffect(() => {
-    const loadBotStatus = async () => {
-      setIsLoading(true);
-      try {
-        // Check if the bot is enabled
-        const { data: configData, error: configError } = await supabase
-          .from('discord_bot_config')
-          .select('enabled')
-          .maybeSingle();
+  const loadBotStatus = async () => {
+    setIsLoading(true);
+    try {
+      // Check if the bot is enabled
+      const { data: configData, error: configError } = await supabase
+        .from('discord_bot_config')
+        .select('enabled')
+        .maybeSingle();
 
-        if (!configError && configData) {
-          setBotEnabled(configData.enabled || false);
-        }
-
-        // Get last message timestamp
-        const { data: messageData, error: messageError } = await supabase
-          .from('discord_status_messages')
-          .select('created_at')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (!messageError && messageData) {
-          setLastUpdated(messageData.created_at);
-        }
-
-        // Simulate response time (in a real app, you would measure this)
-        setResponseTime(Math.floor(Math.random() * 200) + 50); // Random between 50-250ms
-      } catch (error) {
-        console.error("Error loading bot status:", error);
-      } finally {
-        setIsLoading(false);
+      if (!configError && configData) {
+        setBotEnabled(configData.enabled || false);
       }
-    };
 
+      // Get last message timestamp
+      const { data: messageData, error: messageError } = await supabase
+        .from('discord_status_messages')
+        .select('created_at')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!messageError && messageData) {
+        setLastUpdated(messageData.created_at);
+      }
+
+      // Simulate response time (in a real app, you would measure this)
+      setResponseTime(Math.floor(Math.random() * 200) + 50); // Random between 50-250ms
+      
+      // Check if bot is online
+      await checkBotOnline();
+    } catch (error) {
+      console.error("Error loading bot status:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const checkBotOnline = async () => {
+    setIsChecking(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('discord-bot', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'check-status' })
+      });
+      
+      if (error) {
+        console.error("Error checking bot status:", error);
+        setIsOnline(false);
+      } else {
+        setIsOnline(data.online || false);
+        if (data.bot) {
+          setBotInfo(data.bot);
+        }
+      }
+    } catch (error) {
+      console.error("Error checking bot status:", error);
+      setIsOnline(false);
+    } finally {
+      setIsChecking(false);
+    }
+  };
+
+  useEffect(() => {
     loadBotStatus();
 
     // Set up real-time subscription for bot config changes
@@ -116,10 +147,7 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
       // Make sure we're passing a proper JSON object with the action parameter
       const { data, error } = await supabase.functions.invoke('discord-bot', {
         method: 'POST',
-        body: JSON.stringify({ action: 'update-status' }),
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        body: JSON.stringify({ action: 'update-status' })
       });
       
       console.log("Response from Discord bot function:", data, error);
@@ -145,7 +173,7 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
           variant: "default"
         });
         // Refresh the status after sending
-        window.location.reload();
+        loadBotStatus();
       }
     } catch (error: any) {
       console.error("Exception sending status update:", error);
@@ -176,10 +204,7 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
           title,
           content,
           color: 0x5865F2 // Discord Blurple color
-        }),
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        })
       });
       
       if (error) {
@@ -255,6 +280,28 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
           </div>
           
           <div className="flex justify-between items-center">
+            <span className="text-sm font-medium">Online Status</span>
+            {isChecking ? (
+              <Badge variant="outline" className="h-6">
+                <RefreshCw className="mr-1 h-3 w-3 animate-spin" />
+                Prüfe...
+              </Badge>
+            ) : (
+              <Badge 
+                variant={isOnline ? "default" : "destructive"} 
+                className="h-6"
+              >
+                {isOnline ? (
+                  <CheckCircle className="mr-1 h-3 w-3" />
+                ) : (
+                  <AlertTriangle className="mr-1 h-3 w-3" />
+                )}
+                {isOnline ? "Online" : "Offline"}
+              </Badge>
+            )}
+          </div>
+          
+          <div className="flex justify-between items-center">
             <span className="text-sm font-medium">Letztes Update</span>
             <span className="text-sm">{formatLastUpdated(lastUpdated)}</span>
           </div>
@@ -292,17 +339,36 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
             </>
           )}
 
+          {botInfo && (
+            <div className="bg-muted/50 p-3 rounded-md text-xs">
+              <div className="font-medium mb-1">Bot Information</div>
+              <p>Name: {botInfo.username}#{botInfo.discriminator}</p>
+            </div>
+          )}
+
           <div className="border-t pt-3 mt-3 space-y-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="w-full flex items-center justify-center" 
-              onClick={sendStatusUpdate}
-              disabled={isSending || !botEnabled}
-            >
-              <Send className="mr-2 h-4 w-4" />
-              {isSending ? "Senden..." : "Status-Update senden"}
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex-1 flex items-center justify-center" 
+                onClick={sendStatusUpdate}
+                disabled={isSending || !botEnabled || !isOnline}
+              >
+                <Send className="mr-2 h-4 w-4" />
+                {isSending ? "Senden..." : "Status senden"}
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex items-center justify-center" 
+                onClick={checkBotOnline}
+                disabled={isChecking}
+              >
+                <RefreshCw className={`h-4 w-4 ${isChecking ? 'animate-spin' : ''}`} />
+              </Button>
+            </div>
             
             <TooltipProvider>
               <Tooltip>
@@ -312,7 +378,7 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
                     size="sm" 
                     className="w-full flex items-center justify-center" 
                     onClick={sendCustomAnnouncement}
-                    disabled={isSending || !botEnabled}
+                    disabled={isSending || !botEnabled || !isOnline}
                   >
                     <Bell className="mr-2 h-4 w-4" />
                     Ankündigung senden
@@ -326,9 +392,11 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
           </div>
 
           <div className="pt-2 text-xs text-center text-muted-foreground">
-            {botEnabled 
-              ? "Discord-Benachrichtigungen sind aktiviert"
-              : "Discord-Benachrichtigungen sind deaktiviert"}
+            {isOnline 
+              ? "Discord-Bot ist online und bereit"
+              : botEnabled 
+                ? "Discord-Bot ist offline oder nicht erreichbar"
+                : "Discord-Benachrichtigungen sind deaktiviert"}
           </div>
         </div>
       </CardContent>
