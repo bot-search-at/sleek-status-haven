@@ -26,6 +26,16 @@ interface DiscordEmbed {
   author?: { name: string; icon_url?: string; url?: string };
 }
 
+interface RequestData {
+  action?: string;
+  title?: string;
+  content?: string;
+  color?: number;
+  token?: string;
+  guild_id?: string;
+  channel_id?: string;
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -39,14 +49,20 @@ serve(async (req) => {
     );
 
     // Parse request body
-    let requestData = {};
+    let requestData: RequestData = {};
     try {
-      requestData = await req.json();
+      if (req.body) {
+        const bodyText = await req.text();
+        console.log("Request body text:", bodyText);
+        if (bodyText.trim()) {
+          requestData = JSON.parse(bodyText);
+        }
+      }
     } catch (e) {
       console.error("Failed to parse request JSON:", e);
       return new Response(
-        JSON.stringify({ error: 'Invalid JSON in request body' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        JSON.stringify({ error: 'Ungültiges JSON im Request-Body' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       );
     }
 
@@ -61,8 +77,8 @@ serve(async (req) => {
     if (!action) {
       console.error('No action specified in request');
       return new Response(
-        JSON.stringify({ error: 'No action specified in request' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        JSON.stringify({ error: 'Keine Aktion im Request angegeben' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       );
     }
 
@@ -77,7 +93,7 @@ serve(async (req) => {
       if (configError) {
         console.error('Error fetching bot config:', configError);
         return new Response(
-          JSON.stringify({ error: 'Bot configuration not found', details: configError?.message }),
+          JSON.stringify({ error: 'Bot-Konfiguration nicht gefunden', details: configError?.message }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         );
       }
@@ -85,7 +101,7 @@ serve(async (req) => {
       if (!configData) {
         console.error('No bot configuration found');
         return new Response(
-          JSON.stringify({ error: 'Bot configuration not found' }),
+          JSON.stringify({ error: 'Bot-Konfiguration nicht gefunden' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         );
       }
@@ -95,7 +111,7 @@ serve(async (req) => {
       if (!botConfig.enabled) {
         console.log('Bot is disabled, not sending status update');
         return new Response(
-          JSON.stringify({ message: 'Bot is disabled' }),
+          JSON.stringify({ message: 'Bot ist deaktiviert' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         );
       }
@@ -106,7 +122,7 @@ serve(async (req) => {
           hasChannelId: !!botConfig.status_channel_id,
         });
         return new Response(
-          JSON.stringify({ error: 'Incomplete bot configuration' }),
+          JSON.stringify({ error: 'Unvollständige Bot-Konfiguration' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         );
       }
@@ -119,7 +135,7 @@ serve(async (req) => {
       if (servicesError) {
         console.error('Error fetching services:', servicesError);
         return new Response(
-          JSON.stringify({ error: 'Failed to fetch services', details: servicesError.message }),
+          JSON.stringify({ error: 'Fehler beim Abrufen der Dienste', details: servicesError.message }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         );
       }
@@ -257,7 +273,7 @@ serve(async (req) => {
           console.error('Discord API error:', responseData);
           return new Response(
             JSON.stringify({ 
-              error: 'Discord API error', 
+              error: 'Discord API Fehler', 
               details: responseData,
               url: discordApiUrl,
               statusCode: response.status,
@@ -284,7 +300,7 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({ 
             success: true, 
-            message: 'Status update sent to Discord',
+            message: 'Status-Update an Discord gesendet',
             messageId: responseData.id
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
@@ -293,7 +309,7 @@ serve(async (req) => {
         console.error('Error sending to Discord:', error);
         return new Response(
           JSON.stringify({ 
-            error: 'Failed to send status to Discord', 
+            error: 'Fehler beim Senden des Status an Discord', 
             details: error.message,
             stack: error.stack
           }),
@@ -304,18 +320,18 @@ serve(async (req) => {
 
     // Endpoint to test the bot connection
     if (action === 'test-connection') {
-      const { token, guild_id, channel_id } = requestData as any;
+      const { token, guild_id, channel_id } = requestData;
       
       if (!token) {
         return new Response(
-          JSON.stringify({ success: false, error: 'Bot token is required' }),
+          JSON.stringify({ success: false, error: 'Bot-Token ist erforderlich' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         );
       }
       
       if (!channel_id) {
         return new Response(
-          JSON.stringify({ success: false, error: 'Channel ID is required' }),
+          JSON.stringify({ success: false, error: 'Channel-ID ist erforderlich' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         );
       }
@@ -345,7 +361,7 @@ serve(async (req) => {
           return new Response(
             JSON.stringify({ 
               success: false, 
-              error: 'Invalid bot token', 
+              error: 'Ungültiger Bot-Token', 
               details: botData,
               statusCode: botResponse.status
             }),
@@ -375,7 +391,7 @@ serve(async (req) => {
           return new Response(
             JSON.stringify({ 
               success: false, 
-              error: 'Channel not found or bot does not have access to it',
+              error: 'Kanal nicht gefunden oder Bot hat keinen Zugriff',
               details: channelData,
               statusCode: channelResponse.status,
               bot: botData
@@ -419,7 +435,7 @@ serve(async (req) => {
           return new Response(
             JSON.stringify({ 
               success: false, 
-              error: 'Failed to send test message',
+              error: 'Fehler beim Senden der Testnachricht',
               details: testErrorData,
               statusCode: testResponse.status,
               bot: botData,
@@ -436,7 +452,7 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({ 
             success: true, 
-            message: 'Bot connection successful and test message sent', 
+            message: 'Bot-Verbindung erfolgreich und Testnachricht gesendet', 
             bot: botData,
             channel: channelData,
             testMessage: testResponseData
@@ -448,7 +464,7 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({ 
             success: false, 
-            error: 'Failed to test Discord connection', 
+            error: 'Fehler bei der Verbindung zu Discord', 
             details: error.message,
             stack: error.stack
           }),
@@ -457,13 +473,13 @@ serve(async (req) => {
       }
     }
 
-    // New endpoint to send a custom announcement
+    // Endpoint to send a custom announcement
     if (action === 'send-announcement') {
-      const { title, content, color } = requestData as any;
+      const { title, content, color } = requestData;
       
       if (!title || !content) {
         return new Response(
-          JSON.stringify({ success: false, error: 'Title and content are required' }),
+          JSON.stringify({ success: false, error: 'Titel und Inhalt sind erforderlich' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         );
       }
@@ -477,7 +493,7 @@ serve(async (req) => {
       if (configError || !configData) {
         console.error('Error fetching bot config:', configError);
         return new Response(
-          JSON.stringify({ error: 'Bot configuration not found', details: configError?.message }),
+          JSON.stringify({ error: 'Bot-Konfiguration nicht gefunden', details: configError?.message }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         );
       }
@@ -487,7 +503,7 @@ serve(async (req) => {
       if (!botConfig.enabled) {
         console.log('Bot is disabled, not sending announcement');
         return new Response(
-          JSON.stringify({ message: 'Bot is disabled' }),
+          JSON.stringify({ message: 'Bot ist deaktiviert' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         );
       }
@@ -499,7 +515,7 @@ serve(async (req) => {
         color: color || 0x5865F2, // Default Discord blurple if no color provided
         timestamp: new Date().toISOString(),
         footer: {
-          text: "Lovable Status Announcement"
+          text: "Bot Search_AT Status-Ankündigung"
         }
       };
       
@@ -522,7 +538,7 @@ serve(async (req) => {
           console.error('Discord API error when sending announcement:', errorData);
           return new Response(
             JSON.stringify({ 
-              error: 'Discord API error when sending announcement', 
+              error: 'Discord API Fehler beim Senden der Ankündigung', 
               details: errorData,
               statusCode: response.status
             }),
@@ -536,7 +552,7 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({ 
             success: true, 
-            message: 'Announcement sent to Discord',
+            message: 'Ankündigung an Discord gesendet',
             messageId: responseData.id
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
@@ -545,7 +561,7 @@ serve(async (req) => {
         console.error('Error sending announcement to Discord:', error);
         return new Response(
           JSON.stringify({ 
-            error: 'Failed to send announcement to Discord', 
+            error: 'Fehler beim Senden der Ankündigung an Discord', 
             details: error.message,
             stack: error.stack
           }),
@@ -556,14 +572,14 @@ serve(async (req) => {
 
     // Default response for unknown endpoints
     return new Response(
-      JSON.stringify({ error: 'Invalid action', providedAction: action }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      JSON.stringify({ error: 'Ungültige Aktion', providedAction: action }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
     );
   } catch (error: any) {
     console.error('Error:', error);
     return new Response(
-      JSON.stringify({ error: 'Internal server error', details: error.message, stack: error.stack }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      JSON.stringify({ error: 'Interner Serverfehler', details: error.message, stack: error.stack }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }
 });

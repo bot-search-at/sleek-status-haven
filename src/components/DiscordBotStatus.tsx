@@ -3,10 +3,11 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Service } from "@/lib/types";
-import { AlertTriangle, CheckCircle, Clock, MessageSquare, Activity, Send } from "lucide-react";
+import { AlertTriangle, CheckCircle, Clock, MessageSquare, Activity, Send, Info, Bell } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface DiscordBotStatusProps {
   services: Service[];
@@ -112,12 +113,10 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
   const sendStatusUpdate = async () => {
     setIsSending(true);
     try {
-      // Ensure we're sending the correct action parameter
+      // Make sure we're passing a proper JSON object with the action parameter
       const { data, error } = await supabase.functions.invoke('discord-bot', {
         method: 'POST',
-        body: { 
-          action: 'update-status' 
-        },
+        body: JSON.stringify({ action: 'update-status' }),
         headers: {
           'Content-Type': 'application/json'
         }
@@ -152,6 +151,62 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
       console.error("Exception sending status update:", error);
       toast({
         title: "Fehler beim Senden des Status-Updates",
+        description: "Ein unerwarteter Fehler ist aufgetreten.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  // Send a custom announcement
+  const sendCustomAnnouncement = async () => {
+    const title = prompt("Titel der Ankündigung:");
+    if (!title) return;
+    
+    const content = prompt("Inhalt der Ankündigung:");
+    if (!content) return;
+    
+    setIsSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('discord-bot', {
+        method: 'POST',
+        body: JSON.stringify({ 
+          action: 'send-announcement',
+          title,
+          content,
+          color: 0x5865F2 // Discord Blurple color
+        }),
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (error) {
+        console.error("Error sending announcement:", error);
+        toast({
+          title: "Fehler beim Senden der Ankündigung",
+          description: error.message,
+          variant: "destructive"
+        });
+      } else if (data?.error) {
+        console.error("API returned error:", data.error);
+        toast({
+          title: "Fehler beim Senden der Ankündigung",
+          description: data.error,
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Ankündigung gesendet",
+          description: "Die Ankündigung wurde erfolgreich an Discord gesendet.",
+          variant: "default"
+        });
+      }
+    } catch (error: any) {
+      console.error("Exception sending announcement:", error);
+      toast({
+        title: "Fehler beim Senden der Ankündigung",
         description: "Ein unerwarteter Fehler ist aufgetreten.",
         variant: "destructive"
       });
@@ -237,7 +292,7 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
             </>
           )}
 
-          <div className="border-t pt-3 mt-3">
+          <div className="border-t pt-3 mt-3 space-y-2">
             <Button 
               variant="outline" 
               size="sm" 
@@ -246,8 +301,28 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
               disabled={isSending || !botEnabled}
             >
               <Send className="mr-2 h-4 w-4" />
-              {isSending ? "Senden..." : "Manuelles Update senden"}
+              {isSending ? "Senden..." : "Status-Update senden"}
             </Button>
+            
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="secondary" 
+                    size="sm" 
+                    className="w-full flex items-center justify-center" 
+                    onClick={sendCustomAnnouncement}
+                    disabled={isSending || !botEnabled}
+                  >
+                    <Bell className="mr-2 h-4 w-4" />
+                    Ankündigung senden
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Sende eine benutzerdefinierte Ankündigung an Discord</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
 
           <div className="pt-2 text-xs text-center text-muted-foreground">

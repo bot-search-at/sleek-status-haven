@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { PageLayout } from "@/components/PageLayout";
 import { UptimeChart } from "@/components/UptimeChart";
@@ -16,6 +17,8 @@ import { UptimeEditForm } from "@/components/UptimeEditForm";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
+import { RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function Uptime() {
   const [uptimeData, setUptimeData] = useState<UptimeDay[]>([]);
@@ -23,13 +26,16 @@ export default function Uptime() {
   const [timeRange, setTimeRange] = useState("30");
   const [selectedService, setSelectedService] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [currentUptimeDay, setCurrentUptimeDay] = useState<UptimeDay | null>(null);
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const { toast } = useToast();
   const { user } = useAuth();
   
   const fetchData = async () => {
     setIsLoading(true);
+    setIsRefreshing(true);
     try {
       const { data: servicesData, error: servicesError } = await supabase
         .from('services')
@@ -66,15 +72,27 @@ export default function Uptime() {
       const dayData = mappedUptimeData.find(day => day.date === selectedDate);
       setCurrentUptimeDay(dayData || null);
       
+      // Update last refresh time
+      setLastUpdate(new Date());
+      
+      // Show success toast on manual refresh
+      if (isRefreshing && !isLoading) {
+        toast({
+          title: "Daten aktualisiert",
+          description: "Die Verfügbarkeitsdaten wurden erfolgreich aktualisiert.",
+          variant: "default"
+        });
+      }
     } catch (error) {
       console.error("Error fetching data:", error);
       toast({
-        title: "Error fetching data",
-        description: "Could not load uptime data. Please try again later.",
+        title: "Fehler beim Laden der Daten",
+        description: "Die Verfügbarkeitsdaten konnten nicht geladen werden. Bitte versuchen Sie es später erneut.",
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
 
@@ -153,6 +171,21 @@ export default function Uptime() {
     setSelectedDate(date);
   };
 
+  const formatLastUpdateTime = () => {
+    return new Intl.DateTimeFormat('de-DE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    }).format(lastUpdate);
+  };
+
+  const handleRefresh = () => {
+    fetchData();
+  };
+
   return (
     <PageLayout>
       <div className="max-w-5xl mx-auto">
@@ -161,6 +194,21 @@ export default function Uptime() {
           <p className="mt-2 text-muted-foreground">
             Historische Verfügbarkeitsleistung unserer Dienste
           </p>
+          
+          <div className="mt-4 flex justify-center items-center text-sm text-muted-foreground">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-muted-foreground flex items-center gap-1"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+              {isRefreshing ? "Aktualisiere..." : "Aktualisieren"}
+            </Button>
+            <span className="mx-2">•</span>
+            <span>Zuletzt aktualisiert: {formatLastUpdateTime()}</span>
+          </div>
         </div>
         
         <div className="mb-8 flex flex-col sm:flex-row justify-between gap-4 animate-fade-in">
@@ -195,12 +243,12 @@ export default function Uptime() {
             <SelectContent>
               {uptimeData.map(day => (
                 <SelectItem key={day.date} value={day.date}>
-                  {new Date(day.date).toLocaleDateString()}
+                  {new Date(day.date).toLocaleDateString('de-DE')}
                 </SelectItem>
               ))}
               {uptimeData.findIndex(day => day.date === selectedDate) === -1 && (
                 <SelectItem value={selectedDate}>
-                  {new Date(selectedDate).toLocaleDateString()} (Neu)
+                  {new Date(selectedDate).toLocaleDateString('de-DE')} (Neu)
                 </SelectItem>
               )}
             </SelectContent>
@@ -320,6 +368,11 @@ export default function Uptime() {
             </TabsContent>
           ))}
         </Tabs>
+        
+        <div className="mt-8 text-center text-xs text-muted-foreground">
+          <p>Diese Übersicht zeigt die historische Verfügbarkeit aller Dienste.</p>
+          <p className="mt-1">Bei Fragen wenden Sie sich bitte an den Support.</p>
+        </div>
       </div>
     </PageLayout>
   );

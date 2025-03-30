@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Service } from "@/lib/types";
 import { StatusDot } from "./StatusDot";
 import { format } from "date-fns";
-import { de } from "date-fns/locale"; // Import German locale correctly
+import { de } from "date-fns/locale";
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 

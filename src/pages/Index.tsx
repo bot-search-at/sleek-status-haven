@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { CheckCircle, AlertTriangle, Clock, ChevronDown, ChevronUp } from "lucide-react";
+import { CheckCircle, AlertTriangle, Clock, ChevronDown, ChevronUp, RefreshCw, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { SubscribeDialog } from "@/components/SubscribeDialog";
@@ -22,97 +22,112 @@ export default function Index() {
   const [systemStatus, setSystemStatus] = useState<"operational" | "degraded" | "outage">("operational");
   const [isLoading, setIsLoading] = useState(true);
   const [showDiscordStatus, setShowDiscordStatus] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const { toast } = useToast();
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      try {
-        // Fetch services
-        const { data: servicesData, error: servicesError } = await supabase
-          .from('services')
-          .select('*');
-        
-        if (servicesError) throw servicesError;
-        
-        // Map the data to match our type
-        const mappedServices: Service[] = servicesData.map(service => ({
-          id: service.id,
-          name: service.name,
-          description: service.description || '',
-          status: service.status,
-          group: service.service_group,
-          updatedAt: service.updated_at
-        }));
-        
-        setServices(mappedServices);
-        
-        // Group services by their group
-        const groups: Record<string, Service[]> = {};
-        mappedServices.forEach(service => {
-          if (!groups[service.group]) {
-            groups[service.group] = [];
-          }
-          groups[service.group].push(service);
-        });
-        setServiceGroups(groups);
-        
-        // Fetch incidents
-        const { data: incidentsData, error: incidentsError } = await supabase
-          .from('incidents')
-          .select(`
-            *,
-            incident_updates(*)
-          `)
-          .order('created_at', { ascending: false });
-        
-        if (incidentsError) throw incidentsError;
-        
-        // Map the data to match our type
-        const mappedIncidents: Incident[] = incidentsData.map(incident => ({
-          id: incident.id,
-          title: incident.title,
-          status: incident.status,
-          impact: incident.impact,
-          createdAt: incident.created_at,
-          updatedAt: incident.updated_at,
-          resolvedAt: incident.resolved_at,
-          serviceIds: incident.service_ids,
-          updates: incident.incident_updates.map((update: any) => ({
-            id: update.id,
-            incidentId: update.incident_id,
-            status: update.status,
-            message: update.message,
-            createdAt: update.created_at
-          }))
-        }));
-        
-        setIncidents(mappedIncidents);
-        
-        // Filter active incidents
-        const active = mappedIncidents.filter(incident => incident.status !== "resolved");
-        setActiveIncidents(active);
-        
-        // Determine overall system status
-        if (mappedServices.some(s => s.status === "major_outage")) {
-          setSystemStatus("outage");
-        } else if (mappedServices.some(s => ["degraded", "partial_outage"].includes(s.status))) {
-          setSystemStatus("degraded");
-        } else {
-          setSystemStatus("operational");
+  const fetchData = async () => {
+    setIsRefreshing(true);
+    try {
+      // Fetch services
+      const { data: servicesData, error: servicesError } = await supabase
+        .from('services')
+        .select('*');
+      
+      if (servicesError) throw servicesError;
+      
+      // Map the data to match our type
+      const mappedServices: Service[] = servicesData.map(service => ({
+        id: service.id,
+        name: service.name,
+        description: service.description || '',
+        status: service.status,
+        group: service.service_group,
+        updatedAt: service.updated_at
+      }));
+      
+      setServices(mappedServices);
+      
+      // Group services by their group
+      const groups: Record<string, Service[]> = {};
+      mappedServices.forEach(service => {
+        if (!groups[service.group]) {
+          groups[service.group] = [];
         }
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        toast({
-          title: "Error fetching data",
-          description: "Could not load status data. Please try again later.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
+        groups[service.group].push(service);
+      });
+      setServiceGroups(groups);
+      
+      // Fetch incidents
+      const { data: incidentsData, error: incidentsError } = await supabase
+        .from('incidents')
+        .select(`
+          *,
+          incident_updates(*)
+        `)
+        .order('created_at', { ascending: false });
+      
+      if (incidentsError) throw incidentsError;
+      
+      // Map the data to match our type
+      const mappedIncidents: Incident[] = incidentsData.map(incident => ({
+        id: incident.id,
+        title: incident.title,
+        status: incident.status,
+        impact: incident.impact,
+        createdAt: incident.created_at,
+        updatedAt: incident.updated_at,
+        resolvedAt: incident.resolved_at,
+        serviceIds: incident.service_ids,
+        updates: incident.incident_updates.map((update: any) => ({
+          id: update.id,
+          incidentId: update.incident_id,
+          status: update.status,
+          message: update.message,
+          createdAt: update.created_at
+        }))
+      }));
+      
+      setIncidents(mappedIncidents);
+      
+      // Filter active incidents
+      const active = mappedIncidents.filter(incident => incident.status !== "resolved");
+      setActiveIncidents(active);
+      
+      // Determine overall system status
+      if (mappedServices.some(s => s.status === "major_outage")) {
+        setSystemStatus("outage");
+      } else if (mappedServices.some(s => ["degraded", "partial_outage"].includes(s.status))) {
+        setSystemStatus("degraded");
+      } else {
+        setSystemStatus("operational");
       }
-    };
 
+      // Update last update time
+      setLastUpdate(new Date());
+
+      // Show success toast on manual refresh
+      if (isRefreshing) {
+        toast({
+          title: "Daten aktualisiert",
+          description: "Die Statusdaten wurden erfolgreich aktualisiert.",
+          variant: "default"
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      toast({
+        title: "Fehler beim Laden der Daten",
+        description: "Die Statusdaten konnten nicht geladen werden. Bitte versuchen Sie es später erneut.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
     fetchData();
     
     // Set up realtime subscription for updates
@@ -166,6 +181,21 @@ export default function Index() {
     }
   };
 
+  const formatLastUpdateTime = () => {
+    return new Intl.DateTimeFormat('de-DE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    }).format(lastUpdate);
+  };
+
+  const handleRefresh = () => {
+    fetchData();
+  };
+
   if (isLoading) {
     return (
       <PageLayout>
@@ -188,6 +218,21 @@ export default function Index() {
           <p className="mt-2 text-muted-foreground">
             Live-Statusüberwachung für alle meine Dienste
           </p>
+          
+          <div className="mt-4 flex justify-center items-center text-sm text-muted-foreground">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-muted-foreground flex items-center gap-1"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+              {isRefreshing ? "Aktualisiere..." : "Aktualisieren"}
+            </Button>
+            <span className="mx-2">•</span>
+            <span>Zuletzt aktualisiert: {formatLastUpdateTime()}</span>
+          </div>
         </div>
 
         {activeIncidents.length > 0 && (
@@ -247,7 +292,7 @@ export default function Index() {
                       <div>
                         <p className="text-sm font-medium">{incident.title}</p>
                         <p className="text-xs text-muted-foreground">
-                          {new Date(incident.createdAt).toLocaleDateString()}
+                          {new Date(incident.createdAt).toLocaleDateString('de-DE')}
                         </p>
                       </div>
                     </div>
@@ -282,7 +327,7 @@ export default function Index() {
                         <div>
                           <p className="text-sm font-medium">{service.name} Wartung</p>
                           <p className="text-xs text-muted-foreground">
-                            {new Date(service.updatedAt).toLocaleDateString()}
+                            {new Date(service.updatedAt).toLocaleDateString('de-DE')}
                           </p>
                         </div>
                       </div>
@@ -325,6 +370,11 @@ export default function Index() {
               </>
             )}
           </Button>
+        </div>
+        
+        <div className="mt-8 text-center text-xs text-muted-foreground">
+          <p>Diese Statusseite zeigt den aktuellen Zustand aller Dienste in Echtzeit an.</p>
+          <p className="mt-1">Bei Problemen kontaktieren Sie bitte den Support.</p>
         </div>
       </div>
     </PageLayout>

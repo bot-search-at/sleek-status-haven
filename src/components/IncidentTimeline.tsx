@@ -1,7 +1,7 @@
 
 import { Incident, IncidentUpdate } from "@/lib/types";
 import { format } from "date-fns";
-import { de } from "date-fns/locale"; // Import German locale correctly
+import { de } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
