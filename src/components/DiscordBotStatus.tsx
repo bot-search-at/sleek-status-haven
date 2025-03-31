@@ -26,6 +26,7 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
   const [botInfo, setBotInfo] = useState<{ username?: string; discriminator?: string } | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [channelAccessible, setChannelAccessible] = useState(false);
+  const [lastSystemCheck, setLastSystemCheck] = useState<Date | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -94,6 +95,37 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
     }
   };
 
+  // Check system status and detect outages
+  const checkSystemStatus = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('discord-bot', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'check-system-status' })
+      });
+      
+      if (error) {
+        console.error("Fehler bei der Überprüfung des Systemstatus:", error);
+      } else {
+        console.log("System status check response:", data);
+        setLastSystemCheck(new Date());
+        
+        // If the status changed and required notification, a message should have been sent
+        if (data.statusChanged) {
+          toast({
+            title: "Systemstatus hat sich geändert",
+            description: `Status ist jetzt: ${
+              data.status === "operational" ? "Betriebsbereit" :
+              data.status === "degraded" ? "Beeinträchtigt" : "Ausfall"
+            }`,
+            variant: data.status === "operational" ? "default" : "destructive"
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Fehler bei der Systemstatus-Überprüfung:", error);
+    }
+  };
+
   // Überprüfe Admin-Status
   useEffect(() => {
     if (user) {
@@ -111,6 +143,7 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
   // Initialer Load und Echtzeit-Abonnement
   useEffect(() => {
     loadBotStatus();
+    checkSystemStatus();
 
     // Set up real-time subscription for bot config changes
     const channel = supabase
@@ -129,16 +162,25 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
       }, () => {
         loadBotStatus();
       })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'services'
+      }, () => {
+        checkSystemStatus();
+      })
       .subscribe();
 
-    // Automatische Aktualisierung alle 60 Sekunden
-    const interval = setInterval(() => {
+    // Automatische Aktualisierung jede Minute
+    const updateInterval = setInterval(() => {
+      console.log("Automatische Aktualisierung des Bot-Status...");
       loadBotStatus();
-    }, 60000);
+      checkSystemStatus();
+    }, 60000); // Jede Minute aktualisieren
 
     return () => {
       supabase.removeChannel(channel);
-      clearInterval(interval);
+      clearInterval(updateInterval);
     };
   }, []);
 
@@ -379,6 +421,19 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
             <span className="text-sm">{formatLastUpdated(lastUpdated)}</span>
           </div>
           
+          <div className="flex justify-between items-center">
+            <span className="text-sm font-medium">Letzte Prüfung</span>
+            <span className="text-sm">
+              {lastSystemCheck 
+                ? new Intl.DateTimeFormat('de-DE', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                  }).format(lastSystemCheck)
+                : "Nie"}
+            </span>
+          </div>
+          
           {botEnabled && (
             <>
               <div className="flex justify-between items-center">
@@ -415,8 +470,9 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
           {botInfo && (
             <div className="bg-muted/50 p-3 rounded-md text-xs">
               <div className="font-medium mb-1">Bot Information</div>
-              <p>Name: {botInfo.username}</p>
+              <p>Name: {botInfo.username || "Bot Search_AT"}</p>
               {botInfo.discriminator && <p>Discriminator: #{botInfo.discriminator}</p>}
+              <p className="mt-1 text-muted-foreground">Auto-Update alle 60 Sekunden</p>
             </div>
           )}
 

@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 
@@ -34,7 +33,17 @@ interface RequestData {
   token?: string;
   guild_id?: string;
   channel_id?: string;
+  prevStatus?: string;
+  currentStatus?: string;
 }
+
+interface SystemStatus {
+  status: "operational" | "degraded" | "outage";
+  updatedAt: string;
+}
+
+// Keep track of the last known status for outage detection
+let lastKnownStatus: SystemStatus | null = null;
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -121,6 +130,148 @@ serve(async (req) => {
       });
       return new Response(
         JSON.stringify({ error: 'Unvollständige Bot-Konfiguration' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+
+    // Endpoint to check system status and detect changes
+    if (action === 'check-system-status') {
+      // Fetch all services to determine system status
+      const { data: services, error: servicesError } = await supabaseClient
+        .from('services')
+        .select('*');
+
+      if (servicesError) {
+        console.error('Error fetching services:', servicesError);
+        return new Response(
+          JSON.stringify({ error: 'Fehler beim Abrufen der Dienste', details: servicesError.message }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        );
+      }
+
+      // Determine system status
+      let currentStatus: SystemStatus["status"] = "operational";
+      if (services.some(s => s.status === "major_outage")) {
+        currentStatus = "outage";
+      } else if (services.some(s => ["degraded", "partial_outage"].includes(s.status))) {
+        currentStatus = "degraded";
+      }
+
+      const now = new Date().toISOString();
+      const currentSystemStatus: SystemStatus = {
+        status: currentStatus,
+        updatedAt: now
+      };
+
+      // Check if status has changed and if we should send a notification
+      let statusChanged = false;
+      let shouldNotify = false;
+      
+      if (lastKnownStatus === null) {
+        // First check, store the status
+        lastKnownStatus = currentSystemStatus;
+      } else if (lastKnownStatus.status !== currentSystemStatus.status) {
+        // Status has changed
+        statusChanged = true;
+        
+        // Only notify on degradation or outage
+        if (
+          (lastKnownStatus.status === "operational" && 
+           (currentSystemStatus.status === "degraded" || currentSystemStatus.status === "outage")) ||
+          (lastKnownStatus.status === "degraded" && currentSystemStatus.status === "outage")
+        ) {
+          shouldNotify = true;
+        }
+        
+        // Update the last known status
+        lastKnownStatus = currentSystemStatus;
+      }
+
+      // If we should send a notification, do it now
+      if (shouldNotify && botConfig.enabled) {
+        try {
+          // Create the message for the status change notification
+          const statusTitle = currentSystemStatus.status === "outage" 
+            ? "⚠️ Systemausfall erkannt" 
+            : "⚠️ System beeinträchtigt";
+          
+          const statusDescription = currentSystemStatus.status === "outage"
+            ? "Ein Systemausfall wurde erkannt. Services sind nicht verfügbar."
+            : "Einige Systeme sind beeinträchtigt und funktionieren möglicherweise nicht wie erwartet.";
+          
+          const statusColor = currentSystemStatus.status === "outage" ? 0xED4245 : 0xFEE75C;
+          
+          const alertEmbed: DiscordEmbed = {
+            title: statusTitle,
+            description: statusDescription,
+            color: statusColor,
+            footer: {
+              text: `Status geändert um ${new Date().toLocaleString('de-DE')} • Mehr Details auf der Statusseite`
+            },
+            timestamp: new Date().toISOString()
+          };
+          
+          // Send the alert to Discord
+          const discordApiUrl = `https://discord.com/api/v10/channels/${botConfig.status_channel_id}/messages`;
+          
+          const response = await fetch(discordApiUrl, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bot ${botConfig.token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+              embeds: [alertEmbed],
+              content: currentSystemStatus.status === "outage" 
+                ? "@everyone Ein Systemausfall wurde erkannt!" 
+                : "Einige Systeme sind beeinträchtigt."
+            }),
+          });
+          
+          if (!response.ok) {
+            const responseText = await response.text();
+            console.error('Discord API error when sending alert:', responseText);
+          } else {
+            console.log('Alert notification sent successfully');
+            
+            // After sending the alert, automatically send a full status update
+            const updateResponse = await fetch(
+              `https://discord.com/api/v10/channels/${botConfig.status_channel_id}/messages`,
+              {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bot ${botConfig.token}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ content: "Aktueller Systemstatus wird abgerufen..." })
+              }
+            );
+            
+            if (updateResponse.ok) {
+              // Trigger a status update
+              await fetch(Deno.env.get('SUPABASE_FUNCTIONS_URL') + '/discord-bot', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`
+                },
+                body: JSON.stringify({ action: 'update-status' })
+              });
+            }
+          }
+        } catch (error) {
+          console.error('Error sending alert notification:', error);
+        }
+      }
+
+      return new Response(
+        JSON.stringify({ 
+          status: currentSystemStatus.status, 
+          updated: now,
+          statusChanged,
+          shouldNotify,
+          lastStatus: lastKnownStatus ? lastKnownStatus.status : null
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );
     }
@@ -266,7 +417,7 @@ serve(async (req) => {
       console.log('Preparing to send status update to Discord using embeds');
       
       try {
-        // Set Bot Status to DND
+        // Set Bot Status to DND with custom status "Bot Search_AT"
         const botStatusUrl = 'https://discord.com/api/v10/users/@me/settings';
         const statusResponse = await fetch(botStatusUrl, {
           method: 'PATCH',
@@ -343,6 +494,12 @@ serve(async (req) => {
             console.error('Error storing message ID:', insertError);
           }
         }
+
+        // Update the last known status
+        lastKnownStatus = {
+          status: systemStatus as SystemStatus["status"],
+          updatedAt: new Date().toISOString()
+        };
 
         return new Response(
           JSON.stringify({ 
