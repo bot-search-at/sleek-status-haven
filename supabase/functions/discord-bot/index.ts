@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 
@@ -47,6 +46,14 @@ interface SystemStatus {
 let lastKnownStatus: SystemStatus | null = null;
 // Track last embed update time
 let lastEmbedUpdateTime: Date | null = null;
+
+const statusEmojis: Record<string, string> = {
+  operational: "<:green:1356281396007670025>",
+  degraded: "<:reed:1356281418682077234>",
+  partial_outage: "<:reed:1356281418682077234>",
+  major_outage: "<:reed:1356281418682077234>",
+  maintenance: "<:blue:1356281439053807908>"
+};
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -602,11 +609,11 @@ serve(async (req) => {
 
       // Status emojis for text
       const statusEmojis: Record<string, string> = {
-        operational: "🟢",
-        degraded: "🟠",
-        partial_outage: "🟠",
-        major_outage: "🔴",
-        maintenance: "🔧"
+        operational: "<:green:1356281396007670025>",
+        degraded: "<:reed:1356281418682077234>",
+        partial_outage: "<:reed:1356281418682077234>",
+        major_outage: "<:reed:1356281418682077234>",
+        maintenance: "<:blue:1356281439053807908>"
       };
 
       // Group services by their group
