@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 
@@ -44,6 +45,8 @@ interface SystemStatus {
 
 // Keep track of the last known status for outage detection
 let lastKnownStatus: SystemStatus | null = null;
+// Track last embed update time
+let lastEmbedUpdateTime: Date | null = null;
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -132,6 +135,47 @@ serve(async (req) => {
         JSON.stringify({ error: 'Unvollständige Bot-Konfiguration' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );
+    }
+
+    // New action to periodically update the embed
+    if (action === 'auto-update-embed') {
+      // Check if it's been at least 1 minute since last update
+      const now = new Date();
+      if (lastEmbedUpdateTime && (now.getTime() - lastEmbedUpdateTime.getTime() < 60000)) {
+        console.log('Skipping auto-update, last update was less than 1 minute ago');
+        return new Response(
+          JSON.stringify({ message: 'Auto-update skipped, too soon since last update' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        );
+      }
+
+      // Update lastEmbedUpdateTime
+      lastEmbedUpdateTime = now;
+      
+      console.log('Auto-updating embed message...');
+      
+      try {
+        // Trigger update-status action internally
+        const updateResult = await performStatusUpdate(supabaseClient, botConfig);
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            message: 'Embed automatisch aktualisiert',
+            details: updateResult
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        );
+      } catch (error: any) {
+        console.error('Error during auto-update:', error);
+        return new Response(
+          JSON.stringify({ 
+            error: 'Fehler bei der automatischen Aktualisierung', 
+            details: error.message
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        );
+      }
     }
 
     // Endpoint to check system status and detect changes
@@ -264,6 +308,20 @@ serve(async (req) => {
         }
       }
 
+      // After checking system status, always try to auto-update the embed
+      if (botConfig.enabled) {
+        const now = new Date();
+        if (!lastEmbedUpdateTime || (now.getTime() - lastEmbedUpdateTime.getTime() >= 60000)) {
+          console.log('Auto-updating embed after system status check...');
+          try {
+            await performStatusUpdate(supabaseClient, botConfig);
+            lastEmbedUpdateTime = now;
+          } catch (error) {
+            console.error('Error auto-updating embed after system check:', error);
+          }
+        }
+      }
+
       return new Response(
         JSON.stringify({ 
           status: currentSystemStatus.status, 
@@ -307,213 +365,17 @@ serve(async (req) => {
 
     // Endpoint to initialize and update services in Discord
     if (action === 'update-status') {
-      // Fetch all services
-      const { data: services, error: servicesError } = await supabaseClient
-        .from('services')
-        .select('*');
-
-      if (servicesError) {
-        console.error('Error fetching services:', servicesError);
-        return new Response(
-          JSON.stringify({ error: 'Fehler beim Abrufen der Dienste', details: servicesError.message }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-        );
-      }
-
-      // Determine system status
-      let systemStatus = "operational";
-      if (services.some(s => s.status === "major_outage")) {
-        systemStatus = "outage";
-      } else if (services.some(s => ["degraded", "partial_outage"].includes(s.status))) {
-        systemStatus = "degraded";
-      }
-
-      // Status colors for embeds
-      const statusColors = {
-        operational: 0x57F287, // Green
-        degraded: 0xFEE75C,    // Yellow
-        partial_outage: 0xFEE75C, // Yellow
-        major_outage: 0xED4245, // Red
-        maintenance: 0x5865F2   // Blue/Purple
-      };
-
-      // Status emojis for text
-      const statusEmojis = {
-        operational: "🟢",
-        degraded: "🟠",
-        partial_outage: "🟠",
-        major_outage: "🔴",
-        maintenance: "🔧"
-      };
-
-      // Group services by their group
-      const serviceGroups: Record<string, any[]> = {};
-      services.forEach(service => {
-        if (!serviceGroups[service.service_group]) {
-          serviceGroups[service.service_group] = [];
-        }
-        serviceGroups[service.service_group].push(service);
-      });
-
-      // Create embed fields for each service group
-      const embedFields = [];
-      
-      Object.entries(serviceGroups).forEach(([group, groupServices]) => {
-        let fieldValue = '';
-        groupServices.forEach(service => {
-          const emoji = statusEmojis[service.status as keyof typeof statusEmojis] || "❓";
-          const statusText = service.status === "operational" ? "Betriebsbereit" : 
-                           service.status === "degraded" ? "Beeinträchtigt" : 
-                           service.status === "partial_outage" ? "Teilausfall" : 
-                           service.status === "major_outage" ? "Schwerer Ausfall" : 
-                           service.status === "maintenance" ? "Wartung" : "Unbekannt";
-          fieldValue += `${emoji} **${service.name}**: ${statusText}\n`;
-        });
-
-        embedFields.push({
-          name: group,
-          value: fieldValue,
-          inline: false
-        });
-      });
-
-      // Create main embed
-      const statusTitle = systemStatus === "operational" ? "Alle Systeme betriebsbereit" : 
-               systemStatus === "degraded" ? "Einige Systeme beeinträchtigt" : "Systemausfall erkannt";
-
-      const mainEmbed: DiscordEmbed = {
-        title: statusTitle,
-        description: "Aktuelle Status-Informationen zu allen Diensten",
-        color: statusColors[systemStatus as keyof typeof statusColors] || 0x5865F2,
-        fields: embedFields,
-        footer: {
-          text: `Letztes Update: ${new Date().toLocaleString('de-DE')} • Weitere Details auf der Statusseite`
-        },
-        timestamp: new Date().toISOString()
-      };
-
-      const embeds = [mainEmbed];
-      
-      // Check if we have an existing message to update
-      const { data: lastMessage, error: lastMessageError } = await supabaseClient
-        .from('discord_status_messages')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (lastMessageError) {
-        console.error('Error fetching last message:', lastMessageError);
-      }
-
-      const headers = {
-        'Authorization': `Bot ${botConfig.token}`,
-        'Content-Type': 'application/json',
-      };
-
-      let response;
-      let discordApiUrl;
-      
-      console.log('Preparing to send status update to Discord using embeds');
-      
       try {
-        // Set Bot Status to DND with custom status "Bot Search_AT"
-        const botStatusUrl = 'https://discord.com/api/v10/users/@me/settings';
-        const statusResponse = await fetch(botStatusUrl, {
-          method: 'PATCH',
-          headers,
-          body: JSON.stringify({ 
-            status: 'dnd',
-            custom_status: {
-              text: "Bot Search_AT",
-              emoji_name: "🤖"
-            }
-          }),
-        });
-        
-        console.log(`Bot status update response: ${statusResponse.status}`);
-        
-        // If we have a recent message, update it instead of creating a new one
-        if (!lastMessageError && lastMessage && (Date.now() - new Date(lastMessage.created_at).getTime()) < 86400000) { // 24 hours
-          discordApiUrl = `https://discord.com/api/v10/channels/${botConfig.status_channel_id}/messages/${lastMessage.message_id}`;
-          console.log(`Updating existing message: ${lastMessage.message_id} in channel: ${botConfig.status_channel_id}`);
-          
-          response = await fetch(discordApiUrl, {
-            method: 'PATCH',
-            headers,
-            body: JSON.stringify({ embeds }),
-          });
-        } else {
-          // Send a new message
-          discordApiUrl = `https://discord.com/api/v10/channels/${botConfig.status_channel_id}/messages`;
-          console.log(`Sending new message to channel: ${botConfig.status_channel_id}`);
-          
-          response = await fetch(discordApiUrl, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({ embeds }),
-          });
-        }
-
-        console.log(`Discord API response status: ${response.status}`);
-        
-        const responseText = await response.text();
-        let responseData;
-        try {
-          responseData = JSON.parse(responseText);
-          console.log('Discord API response:', JSON.stringify(responseData));
-        } catch (e) {
-          console.log('Could not parse response as JSON:', responseText);
-          responseData = { text: responseText };
-        }
-        
-        if (!response.ok) {
-          console.error('Discord API error:', responseData);
-          return new Response(
-            JSON.stringify({ 
-              error: 'Discord API Fehler', 
-              details: responseData,
-              url: discordApiUrl,
-              statusCode: response.status,
-            }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-          );
-        }
-
-        // If successful and it's a new message, store the message ID
-        if (response.ok && (!lastMessage || (Date.now() - new Date(lastMessage.created_at).getTime()) >= 86400000)) {
-          const { error: insertError } = await supabaseClient
-            .from('discord_status_messages')
-            .insert({
-              message_id: responseData.id,
-              channel_id: botConfig.status_channel_id,
-              content: JSON.stringify(embeds)
-            });
-
-          if (insertError) {
-            console.error('Error storing message ID:', insertError);
-          }
-        }
-
-        // Update the last known status
-        lastKnownStatus = {
-          status: systemStatus as SystemStatus["status"],
-          updatedAt: new Date().toISOString()
-        };
-
+        const result = await performStatusUpdate(supabaseClient, botConfig);
         return new Response(
-          JSON.stringify({ 
-            success: true, 
-            message: 'Status-Update an Discord gesendet',
-            messageId: responseData.id
-          }),
+          JSON.stringify(result),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         );
       } catch (error: any) {
-        console.error('Error sending to Discord:', error);
+        console.error('Error in update-status:', error);
         return new Response(
           JSON.stringify({ 
-            error: 'Fehler beim Senden des Status an Discord', 
+            error: 'Fehler beim Aktualisieren des Status', 
             details: error.message,
             stack: error.stack
           }),
@@ -705,6 +567,212 @@ serve(async (req) => {
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         );
+      }
+    }
+
+    // Helper function to perform status update
+    async function performStatusUpdate(supabaseClient: any, botConfig: BotConfig) {
+      console.log('Performing status update...');
+      
+      // Fetch all services
+      const { data: services, error: servicesError } = await supabaseClient
+        .from('services')
+        .select('*');
+
+      if (servicesError) {
+        throw new Error(`Error fetching services: ${servicesError.message}`);
+      }
+
+      // Determine system status
+      let systemStatus = "operational";
+      if (services.some((s: any) => s.status === "major_outage")) {
+        systemStatus = "outage";
+      } else if (services.some((s: any) => ["degraded", "partial_outage"].includes(s.status))) {
+        systemStatus = "degraded";
+      }
+
+      // Status colors for embeds
+      const statusColors: Record<string, number> = {
+        operational: 0x57F287, // Green
+        degraded: 0xFEE75C,    // Yellow
+        partial_outage: 0xFEE75C, // Yellow
+        major_outage: 0xED4245, // Red
+        maintenance: 0x5865F2   // Blue/Purple
+      };
+
+      // Status emojis for text
+      const statusEmojis: Record<string, string> = {
+        operational: "🟢",
+        degraded: "🟠",
+        partial_outage: "🟠",
+        major_outage: "🔴",
+        maintenance: "🔧"
+      };
+
+      // Group services by their group
+      const serviceGroups: Record<string, any[]> = {};
+      services.forEach((service: any) => {
+        if (!serviceGroups[service.service_group]) {
+          serviceGroups[service.service_group] = [];
+        }
+        serviceGroups[service.service_group].push(service);
+      });
+
+      // Create embed fields for each service group
+      const embedFields = [];
+      
+      Object.entries(serviceGroups).forEach(([group, groupServices]) => {
+        let fieldValue = '';
+        groupServices.forEach((service: any) => {
+          const emoji = statusEmojis[service.status] || "❓";
+          const statusText = service.status === "operational" ? "Betriebsbereit" : 
+                           service.status === "degraded" ? "Beeinträchtigt" : 
+                           service.status === "partial_outage" ? "Teilausfall" : 
+                           service.status === "major_outage" ? "Schwerer Ausfall" : 
+                           service.status === "maintenance" ? "Wartung" : "Unbekannt";
+          fieldValue += `${emoji} **${service.name}**: ${statusText}\n`;
+        });
+
+        embedFields.push({
+          name: group,
+          value: fieldValue,
+          inline: false
+        });
+      });
+
+      // Create main embed
+      const statusTitle = systemStatus === "operational" ? "Alle Systeme betriebsbereit" : 
+               systemStatus === "degraded" ? "Einige Systeme beeinträchtigt" : "Systemausfall erkannt";
+
+      const mainEmbed: DiscordEmbed = {
+        title: statusTitle,
+        description: "Aktuelle Status-Informationen zu allen Diensten",
+        color: statusColors[systemStatus] || 0x5865F2,
+        fields: embedFields,
+        footer: {
+          text: `Letztes Update: ${new Date().toLocaleString('de-DE')} • Weitere Details auf der Statusseite`
+        },
+        timestamp: new Date().toISOString()
+      };
+
+      const embeds = [mainEmbed];
+      
+      // Check if we have an existing message to update
+      const { data: lastMessage, error: lastMessageError } = await supabaseClient
+        .from('discord_status_messages')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (lastMessageError) {
+        console.error('Error fetching last message:', lastMessageError);
+      }
+
+      const headers = {
+        'Authorization': `Bot ${botConfig.token}`,
+        'Content-Type': 'application/json',
+      };
+
+      let response;
+      let discordApiUrl;
+      
+      console.log('Preparing to send status update to Discord using embeds');
+      
+      try {
+        // Set Bot Status to DND with custom status "Bot Search_AT"
+        const botStatusUrl = 'https://discord.com/api/v10/users/@me/settings';
+        const statusResponse = await fetch(botStatusUrl, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({ 
+            status: 'dnd',
+            custom_status: {
+              text: "Bot Search_AT",
+              emoji_name: "🤖"
+            }
+          }),
+        });
+        
+        console.log(`Bot status update response: ${statusResponse.status}`);
+        
+        // If we have a recent message, update it instead of creating a new one
+        if (!lastMessageError && lastMessage && (Date.now() - new Date(lastMessage.created_at).getTime()) < 86400000) { // 24 hours
+          discordApiUrl = `https://discord.com/api/v10/channels/${botConfig.status_channel_id}/messages/${lastMessage.message_id}`;
+          console.log(`Updating existing message: ${lastMessage.message_id} in channel: ${botConfig.status_channel_id}`);
+          
+          response = await fetch(discordApiUrl, {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify({ embeds }),
+          });
+        } else {
+          // Send a new message
+          discordApiUrl = `https://discord.com/api/v10/channels/${botConfig.status_channel_id}/messages`;
+          console.log(`Sending new message to channel: ${botConfig.status_channel_id}`);
+          
+          response = await fetch(discordApiUrl, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ embeds }),
+          });
+        }
+
+        console.log(`Discord API response status: ${response.status}`);
+        
+        const responseText = await response.text();
+        let responseData;
+        try {
+          responseData = JSON.parse(responseText);
+          console.log('Discord API response:', JSON.stringify(responseData));
+        } catch (e) {
+          console.log('Could not parse response as JSON:', responseText);
+          responseData = { text: responseText };
+        }
+        
+        if (!response.ok) {
+          console.error('Discord API error:', responseData);
+          return { 
+            error: 'Discord API Fehler', 
+            details: responseData,
+            url: discordApiUrl,
+            statusCode: response.status,
+          };
+        }
+
+        // If successful and it's a new message, store the message ID
+        if (response.ok && (!lastMessage || (Date.now() - new Date(lastMessage.created_at).getTime()) >= 86400000)) {
+          const { error: insertError } = await supabaseClient
+            .from('discord_status_messages')
+            .insert({
+              message_id: responseData.id,
+              channel_id: botConfig.status_channel_id,
+              content: JSON.stringify(embeds)
+            });
+
+          if (insertError) {
+            console.error('Error storing message ID:', insertError);
+          }
+        }
+
+        // Update the last known status
+        lastKnownStatus = {
+          status: systemStatus as SystemStatus["status"],
+          updatedAt: new Date().toISOString()
+        };
+
+        // Update lastEmbedUpdateTime
+        lastEmbedUpdateTime = new Date();
+
+        return { 
+          success: true, 
+          message: 'Status-Update an Discord gesendet',
+          messageId: responseData.id,
+          updateTime: lastEmbedUpdateTime
+        };
+      } catch (error: any) {
+        console.error('Error sending to Discord:', error);
+        throw error;
       }
     }
 

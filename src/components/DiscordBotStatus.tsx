@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -33,7 +32,6 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
   const loadBotStatus = async () => {
     setIsChecking(true);
     try {
-      // Check if the bot is enabled
       const { data: configData, error: configError } = await supabase
         .from('discord_bot_config')
         .select('enabled')
@@ -43,7 +41,6 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
         setBotEnabled(configData.enabled || false);
       }
 
-      // Get last message timestamp
       const { data: messageData, error: messageError } = await supabase
         .from('discord_status_messages')
         .select('created_at')
@@ -55,11 +52,9 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
         setLastUpdated(messageData.created_at);
       }
 
-      // Check bot online status with more detailed check
       await checkBotOnline();
       
-      // Simulate response time (in a real app, you would measure this)
-      setResponseTime(Math.floor(Math.random() * 100) + 30); // Random between 30-130ms for better performance
+      setResponseTime(Math.floor(Math.random() * 100) + 30);
     } catch (error) {
       console.error("Fehler beim Laden des Bot-Status:", error);
     } finally {
@@ -95,7 +90,6 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
     }
   };
 
-  // Check system status and detect outages
   const checkSystemStatus = async () => {
     try {
       const { data, error } = await supabase.functions.invoke('discord-bot', {
@@ -109,7 +103,6 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
         console.log("System status check response:", data);
         setLastSystemCheck(new Date());
         
-        // If the status changed and required notification, a message should have been sent
         if (data.statusChanged) {
           toast({
             title: "Systemstatus hat sich geändert",
@@ -126,7 +119,26 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
     }
   };
 
-  // Überprüfe Admin-Status
+  const triggerAutoUpdate = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('discord-bot', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'auto-update-embed' })
+      });
+      
+      if (error) {
+        console.error("Fehler bei der automatischen Aktualisierung des Embeds:", error);
+      } else {
+        console.log("Auto-update response:", data);
+        if (data.success) {
+          setLastUpdated(new Date().toISOString());
+        }
+      }
+    } catch (error) {
+      console.error("Fehler bei der automatischen Aktualisierung des Embeds:", error);
+    }
+  };
+
   useEffect(() => {
     if (user) {
       const checkAdminStatus = async () => {
@@ -140,12 +152,10 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
     }
   }, [user]);
 
-  // Initialer Load und Echtzeit-Abonnement
   useEffect(() => {
     loadBotStatus();
     checkSystemStatus();
 
-    // Set up real-time subscription for bot config changes
     const channel = supabase
       .channel('discord_bot_changes')
       .on('postgres_changes', { 
@@ -171,20 +181,24 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
       })
       .subscribe();
 
-    // Automatische Aktualisierung jede Minute
     const updateInterval = setInterval(() => {
       console.log("Automatische Aktualisierung des Bot-Status...");
       loadBotStatus();
       checkSystemStatus();
-    }, 60000); // Jede Minute aktualisieren
+    }, 60000);
+
+    const embedUpdateInterval = setInterval(() => {
+      console.log("Automatische Aktualisierung des Discord Embeds...");
+      triggerAutoUpdate();
+    }, 60000);
 
     return () => {
       supabase.removeChannel(channel);
       clearInterval(updateInterval);
+      clearInterval(embedUpdateInterval);
     };
   }, []);
 
-  // Calculate system status
   const getSystemStatus = () => {
     if (services.some(s => s.status === "major_outage")) {
       return "outage";
@@ -197,7 +211,6 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
 
   const systemStatus = getSystemStatus();
 
-  // Format last updated time
   const formatLastUpdated = (dateString: string | null) => {
     if (!dateString) return "Nie";
     
@@ -211,7 +224,6 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
     }).format(date);
   };
 
-  // Send a manual status update
   const sendStatusUpdate = async () => {
     if (!isAdmin) {
       toast({
@@ -251,7 +263,6 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
           description: "Der Status wurde erfolgreich an Discord gesendet.",
           variant: "default"
         });
-        // Refresh the status after sending
         loadBotStatus();
       }
     } catch (error: any) {
@@ -266,7 +277,6 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
     }
   };
 
-  // Send a custom announcement
   const sendCustomAnnouncement = async () => {
     if (!isAdmin) {
       toast({
@@ -291,7 +301,7 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
           action: 'send-announcement',
           title,
           content,
-          color: 0x5865F2 // Discord Blurple color
+          color: 0x5865F2
         })
       });
       
