@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useAuth } from "@/context/AuthContext";
+import { checkIsAdmin } from "@/utils/admin";
 
 interface DiscordBotStatusProps {
   services: Service[];
@@ -22,10 +24,12 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
   const [isOnline, setIsOnline] = useState<boolean | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [botInfo, setBotInfo] = useState<{ username?: string; discriminator?: string } | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const loadBotStatus = async () => {
-    setIsLoading(true);
+    setIsChecking(true);
     try {
       // Check if the bot is enabled
       const { data: configData, error: configError } = await supabase
@@ -49,20 +53,20 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
         setLastUpdated(messageData.created_at);
       }
 
+      // Check bot online status
+      await checkBotOnline();
+      
       // Simulate response time (in a real app, you would measure this)
       setResponseTime(Math.floor(Math.random() * 200) + 50); // Random between 50-250ms
-      
-      // Check if bot is online
-      await checkBotOnline();
     } catch (error) {
-      console.error("Error loading bot status:", error);
+      console.error("Fehler beim Laden des Bot-Status:", error);
     } finally {
+      setIsChecking(false);
       setIsLoading(false);
     }
   };
 
   const checkBotOnline = async () => {
-    setIsChecking(true);
     try {
       const { data, error } = await supabase.functions.invoke('discord-bot', {
         method: 'POST',
@@ -70,7 +74,7 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
       });
       
       if (error) {
-        console.error("Error checking bot status:", error);
+        console.error("Fehler beim Überprüfen des Bot-Status:", error);
         setIsOnline(false);
       } else {
         setIsOnline(data.online || false);
@@ -79,13 +83,26 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
         }
       }
     } catch (error) {
-      console.error("Error checking bot status:", error);
+      console.error("Fehler bei der Überprüfung des Bot-Status:", error);
       setIsOnline(false);
-    } finally {
-      setIsChecking(false);
     }
   };
 
+  // Überprüfe Admin-Status
+  useEffect(() => {
+    if (user) {
+      const checkAdminStatus = async () => {
+        const isAdminUser = await checkIsAdmin(user.id);
+        setIsAdmin(isAdminUser);
+      };
+      
+      checkAdminStatus();
+    } else {
+      setIsAdmin(false);
+    }
+  }, [user]);
+
+  // Initialer Load und Echtzeit-Abonnement
   useEffect(() => {
     loadBotStatus();
 
@@ -108,8 +125,14 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
       })
       .subscribe();
 
+    // Automatische Aktualisierung alle 60 Sekunden
+    const interval = setInterval(() => {
+      loadBotStatus();
+    }, 60000);
+
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(interval);
     };
   }, []);
 
@@ -142,25 +165,33 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
 
   // Send a manual status update
   const sendStatusUpdate = async () => {
+    if (!isAdmin) {
+      toast({
+        title: "Zugriff verweigert",
+        description: "Nur Administratoren können Status-Updates senden.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setIsSending(true);
     try {
-      // Make sure we're passing a proper JSON object with the action parameter
       const { data, error } = await supabase.functions.invoke('discord-bot', {
         method: 'POST',
         body: JSON.stringify({ action: 'update-status' })
       });
       
-      console.log("Response from Discord bot function:", data, error);
+      console.log("Antwort von Discord Bot Funktion:", data, error);
       
       if (error) {
-        console.error("Error sending status update:", error);
+        console.error("Fehler beim Senden des Status-Updates:", error);
         toast({
           title: "Fehler beim Senden des Status-Updates",
           description: error.message,
           variant: "destructive"
         });
       } else if (data?.error) {
-        console.error("API returned error:", data.error);
+        console.error("API hat einen Fehler zurückgegeben:", data.error);
         toast({
           title: "Fehler beim Senden des Status-Updates",
           description: data.error,
@@ -176,7 +207,7 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
         loadBotStatus();
       }
     } catch (error: any) {
-      console.error("Exception sending status update:", error);
+      console.error("Fehler beim Senden des Status-Updates:", error);
       toast({
         title: "Fehler beim Senden des Status-Updates",
         description: "Ein unerwarteter Fehler ist aufgetreten.",
@@ -189,6 +220,15 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
 
   // Send a custom announcement
   const sendCustomAnnouncement = async () => {
+    if (!isAdmin) {
+      toast({
+        title: "Zugriff verweigert",
+        description: "Nur Administratoren können Ankündigungen senden.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     const title = prompt("Titel der Ankündigung:");
     if (!title) return;
     
@@ -208,14 +248,14 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
       });
       
       if (error) {
-        console.error("Error sending announcement:", error);
+        console.error("Fehler beim Senden der Ankündigung:", error);
         toast({
           title: "Fehler beim Senden der Ankündigung",
           description: error.message,
           variant: "destructive"
         });
       } else if (data?.error) {
-        console.error("API returned error:", data.error);
+        console.error("API hat einen Fehler zurückgegeben:", data.error);
         toast({
           title: "Fehler beim Senden der Ankündigung",
           description: data.error,
@@ -229,7 +269,7 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
         });
       }
     } catch (error: any) {
-      console.error("Exception sending announcement:", error);
+      console.error("Fehler beim Senden der Ankündigung:", error);
       toast({
         title: "Fehler beim Senden der Ankündigung",
         description: "Ein unerwarteter Fehler ist aufgetreten.",
@@ -302,6 +342,18 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
           </div>
           
           <div className="flex justify-between items-center">
+            <span className="text-sm font-medium">Bot Name</span>
+            <span className="text-sm">{botInfo?.username || "Bot Search_AT"}</span>
+          </div>
+          
+          <div className="flex justify-between items-center">
+            <span className="text-sm font-medium">Status</span>
+            <Badge variant="outline" className="h-6 bg-red-500 text-white">
+              DND
+            </Badge>
+          </div>
+          
+          <div className="flex justify-between items-center">
             <span className="text-sm font-medium">Letztes Update</span>
             <span className="text-sm">{formatLastUpdated(lastUpdated)}</span>
           </div>
@@ -342,7 +394,8 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
           {botInfo && (
             <div className="bg-muted/50 p-3 rounded-md text-xs">
               <div className="font-medium mb-1">Bot Information</div>
-              <p>Name: {botInfo.username}#{botInfo.discriminator}</p>
+              <p>Name: {botInfo.username}</p>
+              {botInfo.discriminator && <p>Discriminator: #{botInfo.discriminator}</p>}
             </div>
           )}
 
@@ -353,7 +406,7 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
                 size="sm" 
                 className="flex-1 flex items-center justify-center" 
                 onClick={sendStatusUpdate}
-                disabled={isSending || !botEnabled || !isOnline}
+                disabled={isSending || !botEnabled || !isOnline || !isAdmin}
               >
                 <Send className="mr-2 h-4 w-4" />
                 {isSending ? "Senden..." : "Status senden"}
@@ -363,7 +416,7 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
                 variant="outline" 
                 size="sm" 
                 className="flex items-center justify-center" 
-                onClick={checkBotOnline}
+                onClick={loadBotStatus}
                 disabled={isChecking}
               >
                 <RefreshCw className={`h-4 w-4 ${isChecking ? 'animate-spin' : ''}`} />
@@ -378,7 +431,7 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
                     size="sm" 
                     className="w-full flex items-center justify-center" 
                     onClick={sendCustomAnnouncement}
-                    disabled={isSending || !botEnabled || !isOnline}
+                    disabled={isSending || !botEnabled || !isOnline || !isAdmin}
                   >
                     <Bell className="mr-2 h-4 w-4" />
                     Ankündigung senden
@@ -392,11 +445,13 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
           </div>
 
           <div className="pt-2 text-xs text-center text-muted-foreground">
-            {isOnline 
-              ? "Discord-Bot ist online und bereit"
-              : botEnabled 
-                ? "Discord-Bot ist offline oder nicht erreichbar"
-                : "Discord-Benachrichtigungen sind deaktiviert"}
+            {!isAdmin 
+              ? "Nur Administratoren können Updates senden"
+              : isOnline 
+                ? "Discord-Bot ist online und bereit"
+                : botEnabled 
+                  ? "Discord-Bot ist offline oder nicht erreichbar"
+                  : "Discord-Benachrichtigungen sind deaktiviert"}
           </div>
         </div>
       </CardContent>

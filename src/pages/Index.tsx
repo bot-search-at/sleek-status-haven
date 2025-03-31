@@ -115,7 +115,7 @@ export default function Index() {
         });
       }
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error("Fehler beim Laden der Daten:", error);
       toast({
         title: "Fehler beim Laden der Daten",
         description: "Die Statusdaten konnten nicht geladen werden. Bitte versuchen Sie es später erneut.",
@@ -153,11 +153,17 @@ export default function Index() {
       })
       .subscribe();
       
+    // Automatische Aktualisierung alle 60 Sekunden
+    const interval = setInterval(() => {
+      fetchData();
+    }, 60000);
+      
     return () => {
       supabase.removeChannel(servicesChannel);
       supabase.removeChannel(incidentsChannel);
+      clearInterval(interval);
     };
-  }, [toast]);
+  }, []);
 
   const getStatusIcon = () => {
     switch (systemStatus) {

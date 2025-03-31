@@ -106,7 +106,7 @@ serve(async (req) => {
 
     const botConfig = configData as BotConfig;
     
-    if (!botConfig.enabled) {
+    if (!botConfig.enabled && action !== 'check-status') {
       console.log('Bot is disabled, not sending status update');
       return new Response(
         JSON.stringify({ message: 'Bot ist deaktiviert' }),
@@ -121,6 +121,35 @@ serve(async (req) => {
       });
       return new Response(
         JSON.stringify({ error: 'Unvollständige Bot-Konfiguration' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+
+    // Endpoint to check if user is admin before allowing status updates
+    if (action === 'check-admin') {
+      const userId = requestData.user_id;
+      if (!userId) {
+        return new Response(
+          JSON.stringify({ error: 'Keine Benutzer-ID angegeben' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        );
+      }
+      
+      const { data: adminData, error: adminError } = await supabaseClient
+        .from('admin_users')
+        .select('is_admin')
+        .eq('id', userId)
+        .single();
+        
+      if (adminError) {
+        return new Response(
+          JSON.stringify({ isAdmin: false, error: adminError.message }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        );
+      }
+      
+      return new Response(
+        JSON.stringify({ isAdmin: adminData?.is_admin || false }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );
     }
@@ -237,6 +266,22 @@ serve(async (req) => {
       console.log('Preparing to send status update to Discord using embeds');
       
       try {
+        // Set Bot Status to DND
+        const botStatusUrl = 'https://discord.com/api/v10/users/@me/settings';
+        const statusResponse = await fetch(botStatusUrl, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({ 
+            status: 'dnd',
+            custom_status: {
+              text: "Bot Search_AT",
+              emoji_name: "🤖"
+            }
+          }),
+        });
+        
+        console.log(`Bot status update response: ${statusResponse.status}`);
+        
         // If we have a recent message, update it instead of creating a new one
         if (!lastMessageError && lastMessage && (Date.now() - new Date(lastMessage.created_at).getTime()) < 86400000) { // 24 hours
           discordApiUrl = `https://discord.com/api/v10/channels/${botConfig.status_channel_id}/messages/${lastMessage.message_id}`;
@@ -320,158 +365,48 @@ serve(async (req) => {
       }
     }
 
-    // Endpoint to test the bot connection
-    if (action === 'test-connection') {
-      const { token, guild_id, channel_id } = requestData;
-      
-      if (!token && !botConfig.token) {
-        return new Response(
-          JSON.stringify({ success: false, error: 'Bot-Token ist erforderlich' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-        );
-      }
-      
-      if (!channel_id && !botConfig.status_channel_id) {
-        return new Response(
-          JSON.stringify({ success: false, error: 'Channel-ID ist erforderlich' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-        );
-      }
-
-      const botToken = token || botConfig.token;
-      const channelId = channel_id || botConfig.status_channel_id;
-      
+    // Endpoint to check bot status
+    if (action === 'check-status') {
       try {
-        console.log('Testing Discord connection with token and channel:', botToken.substring(0, 5) + '...', channelId);
-        
-        // Test the connection by getting the bot's user information
+        // Check if the bot is online by calling the Discord API
         const botResponse = await fetch('https://discord.com/api/v10/users/@me', {
           headers: {
-            'Authorization': `Bot ${botToken}`
+            'Authorization': `Bot ${botConfig.token}`
           }
         });
         
-        const botResponseText = await botResponse.text();
-        let botData;
-        try {
-          botData = JSON.parse(botResponseText);
-          console.log('Bot data retrieved:', JSON.stringify(botData));
-        } catch (e) {
-          console.error('Failed to parse bot response:', botResponseText);
-          botData = { text: botResponseText };
-        }
-        
         if (!botResponse.ok) {
-          console.error('Bot authentication failed:', botData);
           return new Response(
             JSON.stringify({ 
-              success: false, 
-              error: 'Ungültiger Bot-Token', 
-              details: botData,
+              online: false, 
+              error: 'Bot ist nicht verbunden',
               statusCode: botResponse.status
             }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
           );
         }
         
-        // Check if channel exists and we have permission to post in it
-        const channelResponse = await fetch(`https://discord.com/api/v10/channels/${channelId}`, {
-          headers: {
-            'Authorization': `Bot ${botToken}`
-          }
-        });
+        const botData = await botResponse.json();
         
-        const channelResponseText = await channelResponse.text();
-        let channelData;
-        try {
-          channelData = JSON.parse(channelResponseText);
-          console.log('Channel data retrieved:', JSON.stringify(channelData));
-        } catch (e) {
-          console.error('Failed to parse channel response:', channelResponseText);
-          channelData = { text: channelResponseText };
-        }
-        
-        if (!channelResponse.ok) {
-          console.error('Channel access failed:', channelData);
-          return new Response(
-            JSON.stringify({ 
-              success: false, 
-              error: 'Kanal nicht gefunden oder Bot hat keinen Zugriff',
-              details: channelData,
-              statusCode: channelResponse.status,
-              bot: botData
-            }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-          );
-        }
-        
-        // Test sending a simple embed to the channel
-        const testEmbed: DiscordEmbed = {
-          title: "Verbindungstest",
-          description: "Der Bot hat erfolgreich eine Verbindung hergestellt!",
-          color: 0x57F287, // Green
-          footer: {
-            text: "Dieser Test wurde automatisch generiert."
-          },
-          timestamp: new Date().toISOString()
-        };
-        
-        const testResponse = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bot ${botToken}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            embeds: [testEmbed]
-          })
-        });
-        
-        if (!testResponse.ok) {
-          const testErrorText = await testResponse.text();
-          let testErrorData;
-          try {
-            testErrorData = JSON.parse(testErrorText);
-          } catch (e) {
-            testErrorData = { text: testErrorText };
-          }
-          
-          console.error('Test message failed:', testErrorData);
-          return new Response(
-            JSON.stringify({ 
-              success: false, 
-              error: 'Fehler beim Senden der Testnachricht',
-              details: testErrorData,
-              statusCode: testResponse.status,
-              bot: botData,
-              channel: channelData
-            }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-          );
-        }
-        
-        const testResponseData = await testResponse.json();
-        console.log('Test message sent:', JSON.stringify(testResponseData));
-        
-        console.log('Connection test successful');
         return new Response(
           JSON.stringify({ 
-            success: true, 
-            message: 'Bot-Verbindung erfolgreich und Testnachricht gesendet', 
-            bot: botData,
-            channel: channelData,
-            testMessage: testResponseData
+            online: true, 
+            message: 'Bot ist online',
+            bot: {
+              username: botData.username || "Bot Search_AT",
+              discriminator: botData.discriminator,
+              id: botData.id
+            }
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         );
       } catch (error: any) {
-        console.error('Error testing Discord connection:', error);
+        console.error('Error checking bot status:', error);
         return new Response(
           JSON.stringify({ 
-            success: false, 
-            error: 'Fehler bei der Verbindung zu Discord', 
-            details: error.message,
-            stack: error.stack
+            online: false, 
+            error: 'Fehler beim Überprüfen des Bot-Status', 
+            details: error.message
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         );
@@ -501,6 +436,23 @@ serve(async (req) => {
       };
       
       try {
+        // Set Bot Status to DND when sending announcements
+        const botStatusUrl = 'https://discord.com/api/v10/users/@me/settings';
+        await fetch(botStatusUrl, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bot ${botConfig.token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            status: 'dnd',
+            custom_status: {
+              text: "Bot Search_AT",
+              emoji_name: "🤖"
+            }
+          }),
+        });
+        
         const response = await fetch(`https://discord.com/api/v10/channels/${botConfig.status_channel_id}/messages`, {
           method: 'POST',
           headers: {
@@ -545,54 +497,6 @@ serve(async (req) => {
             error: 'Fehler beim Senden der Ankündigung an Discord', 
             details: error.message,
             stack: error.stack
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-        );
-      }
-    }
-
-    // Endpoint to check bot status
-    if (action === 'check-status') {
-      try {
-        // Check if the bot is online by calling the Discord API
-        const botResponse = await fetch('https://discord.com/api/v10/users/@me', {
-          headers: {
-            'Authorization': `Bot ${botConfig.token}`
-          }
-        });
-        
-        if (!botResponse.ok) {
-          return new Response(
-            JSON.stringify({ 
-              online: false, 
-              error: 'Bot ist nicht verbunden',
-              statusCode: botResponse.status
-            }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-          );
-        }
-        
-        const botData = await botResponse.json();
-        
-        return new Response(
-          JSON.stringify({ 
-            online: true, 
-            message: 'Bot ist online',
-            bot: {
-              username: botData.username,
-              discriminator: botData.discriminator,
-              id: botData.id
-            }
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-        );
-      } catch (error: any) {
-        console.error('Error checking bot status:', error);
-        return new Response(
-          JSON.stringify({ 
-            online: false, 
-            error: 'Fehler beim Überprüfen des Bot-Status', 
-            details: error.message
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         );
