@@ -365,37 +365,84 @@ serve(async (req) => {
       }
     }
 
-    // Endpoint to check bot status
+    // Endpoint to check bot status - IMPROVED VERSION
     if (action === 'check-status') {
       try {
-        // Check if the bot is online by calling the Discord API
-        const botResponse = await fetch('https://discord.com/api/v10/users/@me', {
-          headers: {
-            'Authorization': `Bot ${botConfig.token}`
-          }
-        });
-        
-        if (!botResponse.ok) {
+        // First, check if the bot configuration is valid
+        if (!botConfig.token) {
           return new Response(
             JSON.stringify({ 
               online: false, 
-              error: 'Bot ist nicht verbunden',
-              statusCode: botResponse.status
+              error: 'Bot-Token fehlt in der Konfiguration'
             }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
           );
         }
         
+        // Use the Discord API to check if the bot is online
+        console.log("Checking Discord bot status using token...");
+        
+        // Make a request to Discord's API to get bot information
+        const botResponse = await fetch('https://discord.com/api/v10/users/@me', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bot ${botConfig.token}`
+          }
+        });
+        
+        console.log(`Discord API response status for bot check: ${botResponse.status}`);
+        
+        if (!botResponse.ok) {
+          const errorText = await botResponse.text();
+          console.error("Error response from Discord API:", errorText);
+          
+          return new Response(
+            JSON.stringify({ 
+              online: false, 
+              error: 'Bot ist nicht verbunden',
+              statusCode: botResponse.status,
+              details: errorText
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+          );
+        }
+        
+        // Parse the bot data
         const botData = await botResponse.json();
+        console.log("Bot data received:", JSON.stringify({
+          id: botData.id,
+          username: botData.username,
+          discriminator: botData.discriminator
+        }));
+        
+        // Now also check if we can access the channel for posting
+        let channelAccessible = false;
+        if (botConfig.status_channel_id) {
+          try {
+            const channelResponse = await fetch(`https://discord.com/api/v10/channels/${botConfig.status_channel_id}`, {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bot ${botConfig.token}`
+              }
+            });
+            
+            channelAccessible = channelResponse.ok;
+            console.log(`Channel access check result: ${channelAccessible ? 'Accessible' : 'Not accessible'}`);
+          } catch (channelError) {
+            console.error("Error checking channel access:", channelError);
+          }
+        }
         
         return new Response(
           JSON.stringify({ 
             online: true, 
             message: 'Bot ist online',
+            channelAccessible: channelAccessible,
             bot: {
               username: botData.username || "Bot Search_AT",
               discriminator: botData.discriminator,
-              id: botData.id
+              id: botData.id,
+              avatar: botData.avatar
             }
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
@@ -406,7 +453,8 @@ serve(async (req) => {
           JSON.stringify({ 
             online: false, 
             error: 'Fehler beim Überprüfen des Bot-Status', 
-            details: error.message
+            details: error.message,
+            stack: error.stack
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         );

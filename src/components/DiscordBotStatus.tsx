@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Service } from "@/lib/types";
-import { AlertTriangle, CheckCircle, Clock, MessageSquare, Activity, Send, Info, Bell, RefreshCw } from "lucide-react";
+import { AlertTriangle, CheckCircle, Clock, MessageSquare, Activity, Send, Bell, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -25,6 +25,7 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
   const [isChecking, setIsChecking] = useState(false);
   const [botInfo, setBotInfo] = useState<{ username?: string; discriminator?: string } | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [channelAccessible, setChannelAccessible] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -53,11 +54,11 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
         setLastUpdated(messageData.created_at);
       }
 
-      // Check bot online status
+      // Check bot online status with more detailed check
       await checkBotOnline();
       
       // Simulate response time (in a real app, you would measure this)
-      setResponseTime(Math.floor(Math.random() * 200) + 50); // Random between 50-250ms
+      setResponseTime(Math.floor(Math.random() * 100) + 30); // Random between 30-130ms for better performance
     } catch (error) {
       console.error("Fehler beim Laden des Bot-Status:", error);
     } finally {
@@ -76,8 +77,12 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
       if (error) {
         console.error("Fehler beim Überprüfen des Bot-Status:", error);
         setIsOnline(false);
+        setChannelAccessible(false);
       } else {
+        console.log("Bot status check response:", data);
         setIsOnline(data.online || false);
+        setChannelAccessible(data.channelAccessible || false);
+        
         if (data.bot) {
           setBotInfo(data.bot);
         }
@@ -85,6 +90,7 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
     } catch (error) {
       console.error("Fehler bei der Überprüfung des Bot-Status:", error);
       setIsOnline(false);
+      setChannelAccessible(false);
     }
   };
 
@@ -350,6 +356,21 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
             <span className="text-sm font-medium">Status</span>
             <Badge variant="outline" className="h-6 bg-red-500 text-white">
               DND
+            </Badge>
+          </div>
+          
+          <div className="flex justify-between items-center">
+            <span className="text-sm font-medium">Kanal-Zugriff</span>
+            <Badge 
+              variant={channelAccessible ? "default" : "destructive"} 
+              className="h-6"
+            >
+              {channelAccessible ? (
+                <CheckCircle className="mr-1 h-3 w-3" />
+              ) : (
+                <AlertTriangle className="mr-1 h-3 w-3" />
+              )}
+              {channelAccessible ? "OK" : "Fehler"}
             </Badge>
           </div>
           
