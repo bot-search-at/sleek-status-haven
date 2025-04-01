@@ -27,23 +27,38 @@ export default function Login() {
         // Handle sign up
         const { error } = await signUp(email, password);
         if (error) {
-          toast.error(error.message || "Bei der Registrierung ist ein Fehler aufgetreten.");
+          toast({
+            title: "Sign Up Failed",
+            description: error.message || "An error occurred during sign up.",
+            variant: "destructive",
+          });
         } else {
-          toast.success("Registrierung erfolgreich. Bitte überprüfen Sie Ihre E-Mail für die Verifizierung (falls erforderlich).");
+          toast({
+            title: "Sign Up Successful",
+            description: "Please check your email for verification (if required).",
+          });
           setIsSignUp(false); // Switch back to login view
         }
       } else {
         // Handle sign in
         const { error } = await signIn(email, password);
         if (error) {
-          toast.error(error.message || "Ungültige Anmeldedaten. Bitte versuchen Sie es erneut.");
+          toast({
+            title: "Login Failed",
+            description: error.message || "Invalid credentials. Please try again.",
+            variant: "destructive",
+          });
         } else {
           navigate("/admin");
         }
       }
     } catch (error) {
       console.error("Authentication error:", error);
-      toast.error("Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut.");
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -63,32 +78,32 @@ export default function Login() {
             </div>
           </Link>
           <h1 className="text-2xl font-bold">
-            {isSignUp ? "Konto erstellen" : "Anmelden bei Status Haven"}
+            {isSignUp ? "Create an Account" : "Log in to Status Haven"}
           </h1>
           <p className="mt-2 text-muted-foreground">
             {isSignUp 
-              ? "Registrieren Sie sich, um auf das Admin-Panel zuzugreifen" 
-              : "Geben Sie Ihre Anmeldedaten ein, um auf das Admin-Panel zuzugreifen"}
+              ? "Sign up to access the admin panel" 
+              : "Enter your credentials to access the admin panel"}
           </p>
         </div>
         
         <Card>
           <form onSubmit={handleSubmit}>
             <CardHeader>
-              <CardTitle>{isSignUp ? "Registrieren" : "Admin-Anmeldung"}</CardTitle>
+              <CardTitle>{isSignUp ? "Sign Up" : "Admin Login"}</CardTitle>
               <CardDescription>
                 {isSignUp 
-                  ? "Erstellen Sie Ihr Konto, um auf Admin-Funktionen zuzugreifen" 
-                  : "Zugriff auf eingeschränkte Admin-Funktionen"}
+                  ? "Create your account to access admin features" 
+                  : "Access restricted admin features"}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">E-Mail</Label>
+                <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="email@beispiel.com"
+                  placeholder="email@example.com"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   required
@@ -96,13 +111,13 @@ export default function Login() {
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Passwort</Label>
+                  <Label htmlFor="password">Password</Label>
                   {!isSignUp && (
                     <Link 
                       to="#" 
                       className="text-xs text-primary hover:underline"
                     >
-                      Passwort vergessen?
+                      Forgot password?
                     </Link>
                   )}
                 </div>
@@ -122,30 +137,30 @@ export default function Login() {
                 disabled={isLoading}
               >
                 {isLoading 
-                  ? (isSignUp ? "Konto wird erstellt..." : "Anmeldung läuft...") 
-                  : (isSignUp ? "Konto erstellen" : "Anmelden")}
+                  ? (isSignUp ? "Creating Account..." : "Logging in...") 
+                  : (isSignUp ? "Create Account" : "Log in")}
               </Button>
               <div className="text-center text-sm text-muted-foreground">
                 {isSignUp ? (
                   <>
-                    Haben Sie bereits ein Konto?{" "}
+                    Already have an account?{" "}
                     <button 
                       type="button"
                       onClick={() => setIsSignUp(false)}
                       className="text-primary hover:underline"
                     >
-                      Anmelden
+                      Log in
                     </button>
                   </>
                 ) : (
                   <>
-                    Haben Sie noch kein Konto?{" "}
+                    Don't have an account?{" "}
                     <button 
                       type="button"
                       onClick={() => setIsSignUp(true)}
                       className="text-primary hover:underline"
                     >
-                      Registrieren
+                      Sign up
                     </button>
                   </>
                 )}
@@ -156,7 +171,7 @@ export default function Login() {
         
         <div className="mt-4 text-center text-sm text-muted-foreground">
           <Link to="/" className="text-primary hover:underline">
-            Zurück zur Statusseite
+            Return to Status Page
           </Link>
         </div>
       </div>
