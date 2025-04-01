@@ -1,5 +1,5 @@
 
-import { toast as sonnerToast, type ToastT, type ToastToDismiss } from "sonner";
+import { toast as sonnerToast, type ToastT } from "sonner";
 
 // Export the hook for using toast
 export const useToast = () => {
