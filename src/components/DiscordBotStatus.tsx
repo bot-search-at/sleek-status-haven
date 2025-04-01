@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +27,8 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [channelAccessible, setChannelAccessible] = useState(false);
   const [lastSystemCheck, setLastSystemCheck] = useState<Date | null>(null);
+  const [updateInterval, setUpdateInterval] = useState<number | null>(null);
+  const [embedUpdateInterval, setEmbedUpdateInterval] = useState<number | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -152,6 +155,7 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
     }
   }, [user]);
 
+  // Setup and cleanup intervals and subscriptions
   useEffect(() => {
     loadBotStatus();
     checkSystemStatus();
@@ -181,21 +185,31 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
       })
       .subscribe();
 
-    const updateInterval = setInterval(() => {
+    // Clear existing intervals if any
+    if (updateInterval) clearInterval(updateInterval);
+    if (embedUpdateInterval) clearInterval(embedUpdateInterval);
+
+    // Setup new intervals
+    const statusUpdateInterval = window.setInterval(() => {
       console.log("Automatische Aktualisierung des Bot-Status...");
       loadBotStatus();
       checkSystemStatus();
     }, 60000);
 
-    const embedUpdateInterval = setInterval(() => {
+    const discordEmbedUpdateInterval = window.setInterval(() => {
       console.log("Automatische Aktualisierung des Discord Embeds...");
       triggerAutoUpdate();
     }, 60000);
 
+    // Store interval IDs
+    setUpdateInterval(statusUpdateInterval);
+    setEmbedUpdateInterval(discordEmbedUpdateInterval);
+
     return () => {
+      // Clean up
       supabase.removeChannel(channel);
-      clearInterval(updateInterval);
-      clearInterval(embedUpdateInterval);
+      clearInterval(statusUpdateInterval);
+      clearInterval(discordEmbedUpdateInterval);
     };
   }, []);
 
@@ -336,6 +350,17 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
     } finally {
       setIsSending(false);
     }
+  };
+
+  // Manual refresh button handler
+  const handleManualRefresh = () => {
+    loadBotStatus();
+    checkSystemStatus();
+    triggerAutoUpdate();
+    toast({
+      title: "Status aktualisiert",
+      description: "Discord Bot Status wurde manuell aktualisiert",
+    });
   };
 
   if (isLoading) {
@@ -503,7 +528,7 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
                 variant="outline" 
                 size="sm" 
                 className="flex items-center justify-center" 
-                onClick={loadBotStatus}
+                onClick={handleManualRefresh}
                 disabled={isChecking}
               >
                 <RefreshCw className={`h-4 w-4 ${isChecking ? 'animate-spin' : ''}`} />
