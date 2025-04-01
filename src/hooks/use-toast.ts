@@ -1,10 +1,16 @@
 
 import { toast as sonnerToast } from "sonner";
-import { useToast as useShadcnToast } from "@/components/ui/toast";
+import { useToast as useSonnerToast } from "sonner";
 
-export { useShadcnToast as useToast };
+// Export the hook for using toast
+export const useToast = () => {
+  return {
+    toast: toast,
+    toasts: [] // This matches the structure expected by the Toaster component
+  };
+};
 
-// Re-export the toast function with additional variants
+// Export the toast function with additional variants
 export const toast = {
   ...sonnerToast,
   // Add any custom toast methods here
