@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
 interface UptimeEditFormProps {
@@ -40,6 +40,7 @@ export function UptimeEditForm({ date, services, uptimeData, onUptimeUpdated }: 
         )
       : Object.fromEntries(services.map((service) => [service.id, "100"]))
   );
+  const { toast } = useToast();
 
   const handleServiceUptimeChange = (serviceId: string, value: string) => {
     setServiceUptimes((prev) => ({
@@ -89,13 +90,20 @@ export function UptimeEditForm({ date, services, uptimeData, onUptimeUpdated }: 
         if (error) throw error;
       }
 
-      toast.success("Uptime data has been updated successfully");
+      toast({
+        title: "Success",
+        description: "Uptime data has been updated successfully",
+      });
       
       onUptimeUpdated();
       setIsOpen(false);
     } catch (error) {
       console.error("Error updating uptime data:", error);
-      toast.error("Failed to update uptime data");
+      toast({
+        title: "Error",
+        description: "Failed to update uptime data",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }

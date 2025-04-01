@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 
@@ -36,7 +35,6 @@ interface RequestData {
   channel_id?: string;
   prevStatus?: string;
   currentStatus?: string;
-  user_id?: string;
 }
 
 interface SystemStatus {
@@ -284,20 +282,6 @@ serve(async (req) => {
           if (!response.ok) {
             const responseText = await response.text();
             console.error('Discord API error when sending alert:', responseText);
-            
-            // Check for rate limit error
-            if (response.status === 429) {
-              const rateLimitData = JSON.parse(responseText);
-              console.error('Discord rate limit hit:', rateLimitData);
-              return new Response(
-                JSON.stringify({ 
-                  error: 'Discord Rate Limit erreicht', 
-                  details: rateLimitData,
-                  retryAfter: rateLimitData.retry_after
-                }),
-                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 429 }
-              );
-            }
           } else {
             console.log('Alert notification sent successfully');
             
@@ -324,10 +308,6 @@ serve(async (req) => {
                 },
                 body: JSON.stringify({ action: 'update-status' })
               });
-            } else if (updateResponse.status === 429) {
-              // Handle rate limit
-              const rateLimitData = await updateResponse.json();
-              console.error('Discord rate limit hit for status update:', rateLimitData);
             }
           }
         } catch (error) {
@@ -400,19 +380,6 @@ serve(async (req) => {
         );
       } catch (error: any) {
         console.error('Error in update-status:', error);
-        
-        // Check if this is a rate limit error
-        if (error.status === 429) {
-          return new Response(
-            JSON.stringify({ 
-              error: 'Discord Rate Limit erreicht', 
-              details: error.data,
-              retryAfter: error.data?.retry_after
-            }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 429 }
-          );
-        }
-        
         return new Response(
           JSON.stringify({ 
             error: 'Fehler beim Aktualisieren des Status', 
@@ -455,25 +422,6 @@ serve(async (req) => {
           const errorText = await botResponse.text();
           console.error("Error response from Discord API:", errorText);
           
-          // Check for rate limit error
-          if (botResponse.status === 429) {
-            try {
-              const rateLimitData = JSON.parse(errorText);
-              console.error('Discord rate limit hit for bot check:', rateLimitData);
-              return new Response(
-                JSON.stringify({ 
-                  online: false, 
-                  error: 'Discord Rate Limit erreicht',
-                  rateLimitData,
-                  retryAfter: rateLimitData.retry_after
-                }),
-                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 429 }
-              );
-            } catch (e) {
-              console.error('Failed to parse rate limit data:', e);
-            }
-          }
-          
           return new Response(
             JSON.stringify({ 
               online: false, 
@@ -503,21 +451,6 @@ serve(async (req) => {
                 'Authorization': `Bot ${botConfig.token}`
               }
             });
-            
-            if (channelResponse.status === 429) {
-              const rateLimitData = await channelResponse.json();
-              console.error('Discord rate limit hit for channel check:', rateLimitData);
-              return new Response(
-                JSON.stringify({ 
-                  online: true,
-                  channelAccessible: false,
-                  error: 'Discord Rate Limit erreicht für Kanalüberprüfung',
-                  rateLimitData,
-                  retryAfter: rateLimitData.retry_after
-                }),
-                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 429 }
-              );
-            }
             
             channelAccessible = channelResponse.ok;
             console.log(`Channel access check result: ${channelAccessible ? 'Accessible' : 'Not accessible'}`);
@@ -608,20 +541,6 @@ serve(async (req) => {
         console.log(`Discord API response status for announcement: ${response.status}`);
         
         if (!response.ok) {
-          // Check for rate limit error
-          if (response.status === 429) {
-            const rateLimitData = await response.json();
-            console.error('Discord rate limit hit for announcement:', rateLimitData);
-            return new Response(
-              JSON.stringify({ 
-                error: 'Discord Rate Limit erreicht', 
-                details: rateLimitData,
-                retryAfter: rateLimitData.retry_after
-              }),
-              { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 429 }
-            );
-          }
-          
           const errorData = await response.json().catch(() => ({}));
           console.error('Discord API error when sending announcement:', errorData);
           return new Response(
@@ -784,17 +703,6 @@ serve(async (req) => {
         
         console.log(`Bot status update response: ${statusResponse.status}`);
         
-        // Check for rate limit
-        if (statusResponse.status === 429) {
-          const rateLimitData = await statusResponse.json();
-          console.error('Discord rate limit hit for bot status update:', rateLimitData);
-          throw { 
-            status: 429, 
-            message: 'Discord Rate Limit erreicht für Bot-Status-Update', 
-            data: rateLimitData 
-          };
-        }
-        
         // If we have a recent message, update it instead of creating a new one
         if (!lastMessageError && lastMessage && (Date.now() - new Date(lastMessage.created_at).getTime()) < 86400000) { // 24 hours
           discordApiUrl = `https://discord.com/api/v10/channels/${botConfig.status_channel_id}/messages/${lastMessage.message_id}`;
@@ -818,25 +726,6 @@ serve(async (req) => {
         }
 
         console.log(`Discord API response status: ${response.status}`);
-        
-        // Check for rate limit
-        if (response.status === 429) {
-          const rateLimitText = await response.text();
-          console.error('Discord rate limit text:', rateLimitText);
-          let rateLimitData;
-          try {
-            rateLimitData = JSON.parse(rateLimitText);
-          } catch (e) {
-            rateLimitData = { error: 'Failed to parse rate limit data', text: rateLimitText };
-          }
-          
-          console.error('Discord rate limit hit for message update:', rateLimitData);
-          throw { 
-            status: 429, 
-            message: 'Discord Rate Limit erreicht für Nachrichtenaktualisierung', 
-            data: rateLimitData 
-          };
-        }
         
         const responseText = await response.text();
         let responseData;
