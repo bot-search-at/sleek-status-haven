@@ -35,11 +35,7 @@ export function SubscribeDialog({ trigger }: SubscribeDialogProps) {
     e.preventDefault();
     
     if (!email || !email.includes("@")) {
-      toast({
-        title: "Invalid email",
-        description: "Please enter a valid email address",
-        variant: "destructive",
-      });
+      toast.error("Bitte geben Sie eine gültige E-Mail-Adresse ein");
       return;
     }
     
@@ -50,10 +46,7 @@ export function SubscribeDialog({ trigger }: SubscribeDialogProps) {
       setIsLoading(false);
       setIsOpen(false);
       
-      toast({
-        title: "Subscription successful",
-        description: "You are now subscribed to status updates",
-      });
+      toast.success("Sie haben sich erfolgreich für Status-Updates angemeldet");
       
       // In a real implementation, you would save this to a database
       console.log("Subscription:", {
@@ -69,27 +62,27 @@ export function SubscribeDialog({ trigger }: SubscribeDialogProps) {
         {trigger || (
           <Button variant="outline" size="sm" className="items-center gap-1">
             <Bell className="h-4 w-4" />
-            <span>Subscribe</span>
+            <span>Abonnieren</span>
           </Button>
         )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Subscribe to Status Updates</DialogTitle>
+          <DialogTitle>Status-Updates abonnieren</DialogTitle>
           <DialogDescription>
-            Get notified about service incidents and scheduled maintenance.
+            Erhalten Sie Benachrichtigungen über Vorfälle und geplante Wartungsarbeiten.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="email" className="col-span-4">
-                Email address
+                E-Mail-Adresse
               </Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="your@email.com"
+                placeholder="ihre@email.com"
                 className="col-span-4"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -97,7 +90,7 @@ export function SubscribeDialog({ trigger }: SubscribeDialogProps) {
               />
             </div>
             <div className="space-y-2">
-              <Label className="col-span-4">Notification preferences</Label>
+              <Label className="col-span-4">Benachrichtigungseinstellungen</Label>
               <div className="flex items-center space-x-2">
                 <Checkbox 
                   id="incidents" 
@@ -106,7 +99,7 @@ export function SubscribeDialog({ trigger }: SubscribeDialogProps) {
                     setPreferences(prev => ({ ...prev, incidents: checked === true }))
                   }
                 />
-                <Label htmlFor="incidents" className="cursor-pointer">New incidents</Label>
+                <Label htmlFor="incidents" className="cursor-pointer">Neue Vorfälle</Label>
               </div>
               <div className="flex items-center space-x-2">
                 <Checkbox 
@@ -116,7 +109,7 @@ export function SubscribeDialog({ trigger }: SubscribeDialogProps) {
                     setPreferences(prev => ({ ...prev, maintenance: checked === true }))
                   }
                 />
-                <Label htmlFor="maintenance" className="cursor-pointer">Scheduled maintenance</Label>
+                <Label htmlFor="maintenance" className="cursor-pointer">Geplante Wartungsarbeiten</Label>
               </div>
               <div className="flex items-center space-x-2">
                 <Checkbox 
@@ -126,13 +119,13 @@ export function SubscribeDialog({ trigger }: SubscribeDialogProps) {
                     setPreferences(prev => ({ ...prev, resolved: checked === true }))
                   }
                 />
-                <Label htmlFor="resolved" className="cursor-pointer">Resolved incidents</Label>
+                <Label htmlFor="resolved" className="cursor-pointer">Behobene Vorfälle</Label>
               </div>
             </div>
           </div>
           <DialogFooter>
             <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Subscribing..." : "Subscribe"}
+              {isLoading ? "Wird abonniert..." : "Abonnieren"}
             </Button>
           </DialogFooter>
         </form>
