@@ -20,7 +20,8 @@ type ToastProps = {
 const createToast = (props: ToastProps) => {
   return sonnerToast(props.title || "", {
     description: props.description,
-    className: props.variant === "destructive" ? "bg-destructive text-destructive-foreground" : ""
+    className: props.variant === "destructive" ? "bg-destructive text-destructive-foreground" : "",
+    duration: 4000
   });
 };
 
