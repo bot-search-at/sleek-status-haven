@@ -5,35 +5,36 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 220 20% 16%;
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 20% 16%;
+    --card-foreground: 222 47% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 20% 16%;
+    --popover-foreground: 222 47% 11%;
 
-    --primary: 220 70% 50%;
-    --primary-foreground: 0 0% 98%;
+    --primary: 221 83% 53%;
+    --primary-foreground: 210 40% 98%;
+    --primary-rgb: 59, 130, 246;
 
-    --secondary: 220 20% 96%;
-    --secondary-foreground: 220 20% 16%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
 
-    --muted: 220 20% 96%;
-    --muted-foreground: 220 20% 64%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
 
-    --accent: 220 20% 96%;
-    --accent-foreground: 220 20% 16%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
 
-    --border: 220 20% 92%;
-    --input: 220 20% 92%;
-    --ring: 220 70% 50%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 221 83% 53%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
     --status-operational: 142 72% 29%;
     --status-degraded: 28 96% 54%;
@@ -41,47 +42,48 @@
     --status-major: 0 84% 60%;
     --status-maintenance: 246 70% 60%;
     
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 210 40% 98%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 221 83% 53%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 210 40% 96%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-ring: 221 83% 53%;
 
     --discord-blurple: 235 86% 65%;
     --discord-green: 139 47% 44%;
   }
 
   .dark {
-    --background: 220 20% 10%;
-    --foreground: 0 0% 98%;
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
 
-    --card: 220 20% 12%;
-    --card-foreground: 0 0% 98%;
+    --card: 222 47% 14%;
+    --card-foreground: 210 40% 98%;
 
-    --popover: 220 20% 12%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 222 47% 14%;
+    --popover-foreground: 210 40% 98%;
 
-    --primary: 220 70% 50%;
-    --primary-foreground: 0 0% 98%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 210 40% 98%;
+    --primary-rgb: 96, 165, 250;
 
-    --secondary: 220 20% 16%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
 
-    --muted: 220 20% 16%;
-    --muted-foreground: 220 20% 64%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
 
-    --accent: 220 20% 16%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 98%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 62% 65%;
+    --destructive-foreground: 210 40% 98%;
 
-    --border: 220 20% 24%;
-    --input: 220 20% 24%;
-    --ring: 220 70% 50%;
+    --border: 217 33% 20%;
+    --input: 217 33% 20%;
+    --ring: 224 76% 48%;
 
     --status-operational: 142 72% 29%;
     --status-degraded: 28 96% 54%;
@@ -89,14 +91,14 @@
     --status-major: 0 84% 60%;
     --status-maintenance: 246 70% 60%;
 
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-background: 222 47% 10%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 217 91% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 217 33% 17%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217 33% 20%;
+    --sidebar-ring: 224 76% 48%;
 
     --discord-blurple: 235 86% 65%;
     --discord-green: 139 47% 44%;
@@ -108,10 +110,41 @@
 
   body {
     @apply bg-background text-foreground antialiased;
+    background-image: radial-gradient(
+      rgba(var(--primary-rgb), 0.03) 1px,
+      transparent 1px
+    );
+    background-size: 25px 25px;
   }
 
   .glass-panel {
     @apply bg-background/80 backdrop-blur-lg border border-border/50 shadow-sm;
+  }
+
+  .neo-card {
+    @apply bg-card/80 backdrop-blur-sm border border-border/80 relative overflow-hidden;
+  }
+
+  .neo-card::before {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 transition-opacity duration-500;
+  }
+
+  .neo-card:hover::before {
+    @apply opacity-100;
+  }
+
+  .neo-button {
+    @apply relative overflow-hidden transition-all duration-300 hover:shadow-md active:scale-95;
+  }
+
+  .neo-button::before {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent opacity-0 transition-opacity duration-300;
+  }
+
+  .neo-button:hover::before {
+    @apply opacity-100;
   }
 
   .status-dot {
@@ -139,15 +172,15 @@
   }
 
   .service-transition {
-    @apply transition-all duration-300 ease-in-out transform hover:translate-y-[-2px] hover:shadow-md;
+    @apply transition-all duration-500 ease-in-out transform hover:translate-y-[-5px] hover:shadow-lg;
   }
 
   .page-transition {
-    @apply animate-fade-in;
+    @apply animate-slide-up;
   }
 
   .chart-container {
-    @apply rounded-md p-4 h-full w-full;
+    @apply rounded-md p-4 h-full w-full neo-card;
   }
 
   .status-badge {
@@ -190,8 +223,32 @@
   .discord-card {
     @apply border-l-4 border-discord-blurple transition-all duration-300;
   }
+
+  /* Animations */
+  .hover-lift {
+    @apply transition-transform duration-300 hover:-translate-y-1;
+  }
+
+  .hover-glow {
+    @apply transition-all duration-300 hover:shadow-[0_0_15px_rgba(var(--primary-rgb),0.3)];
+  }
+
+  .blur-bg {
+    @apply relative;
+  }
+
+  .blur-bg::before {
+    content: "";
+    @apply absolute -inset-0.5 bg-gradient-to-r from-primary/20 to-purple-500/20 rounded-lg blur opacity-50 group-hover:opacity-75 transition duration-1000;
+    z-index: -1;
+  }
+
+  .blob-animation {
+    @apply absolute bg-primary/20 rounded-full blur-2xl animate-blob;
+  }
 }
 
+/* Extending animations */
 @keyframes float {
   0% {
     transform: translateY(0px);
@@ -206,4 +263,54 @@
 
 .float-animation {
   animation: float 6s ease-in-out infinite;
+}
+
+/* Cursor effects */
+.custom-cursor {
+  @apply fixed w-8 h-8 pointer-events-none rounded-full z-50 border-2 border-primary/50 transform -translate-x-1/2 -translate-y-1/2 transition-all duration-200 ease-out mix-blend-difference;
+}
+
+.custom-cursor-dot {
+  @apply fixed w-2 h-2 bg-primary rounded-full pointer-events-none z-50 transform -translate-x-1/2 -translate-y-1/2 transition-transform duration-300 ease-out;
+}
+
+/* Modal animations */
+.modal-enter {
+  @apply animate-scale-in;
+}
+
+.modal-exit {
+  @apply animate-scale-out;
+}
+
+/* Button effects */
+.button-effect {
+  @apply relative overflow-hidden;
+}
+
+.button-effect:after {
+  content: "";
+  @apply absolute inset-0 h-full w-full bg-primary/10 -translate-x-full transform transition-transform duration-300;
+}
+
+.button-effect:hover:after {
+  @apply translate-x-0;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-secondary/50 rounded-full;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-primary/30 rounded-full hover:bg-primary/50 transition-colors;
+}
+
+/* Gradient text */
+.gradient-text {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-500;
 }

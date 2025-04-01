@@ -113,6 +113,10 @@ export default {
                     '0%, 100%': { opacity: '1' },
                     '50%': { opacity: '0.5' }
                 },
+                'pulse-slow': {
+                    '0%, 100%': { opacity: '1' },
+                    '50%': { opacity: '0.7' }
+                },
                 'slide-up': {
                     '0%': { transform: 'translateY(20px)', opacity: '0' },
                     '100%': { transform: 'translateY(0)', opacity: '1' }
@@ -132,6 +136,26 @@ export default {
                 'shimmer': {
                     '0%': { backgroundPosition: '-500px 0' },
                     '100%': { backgroundPosition: '500px 0' }
+                },
+                'blob': {
+                    '0%': { transform: 'translate(0px, 0px) scale(1)' },
+                    '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
+                    '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+                    '100%': { transform: 'translate(0px, 0px) scale(1)' }
+                },
+                'glow': {
+                    '0%': { boxShadow: '0 0 0 0 rgba(var(--primary-rgb), 0.4)' },
+                    '70%': { boxShadow: '0 0 0 10px rgba(var(--primary-rgb), 0)' },
+                    '100%': { boxShadow: '0 0 0 0 rgba(var(--primary-rgb), 0)' }
+                },
+                'float': {
+                    '0%': { transform: 'translateY(0px)' },
+                    '50%': { transform: 'translateY(-10px)' },
+                    '100%': { transform: 'translateY(0px)' }
+                },
+                'grid-background': {
+                    '0%': { backgroundPosition: '0% 0%' },
+                    '100%': { backgroundPosition: '100% 100%' }
                 }
 			},
 			animation: {
@@ -144,11 +168,16 @@ export default {
                 'slide-in': 'slide-in 0.3s ease-out',
                 'slide-out': 'slide-out 0.3s ease-out',
                 'pulse-status': 'pulse-status 2s ease-in-out infinite',
+                'pulse-slow': 'pulse-slow 4s ease-in-out infinite',
                 'slide-up': 'slide-up 0.4s ease-out',
                 'slide-down': 'slide-down 0.4s ease-out',
                 'bounce': 'bounce 2s ease-in-out infinite',
                 'rotate': 'rotate 1s linear infinite',
-                'shimmer': 'shimmer 2s linear infinite'
+                'shimmer': 'shimmer 2s linear infinite',
+                'blob': 'blob 7s infinite',
+                'glow': 'glow 2s infinite',
+                'float': 'float 6s ease-in-out infinite',
+                'grid-background': 'grid-background 15s ease infinite'
 			}
 		}
 	},
