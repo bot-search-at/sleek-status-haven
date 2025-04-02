@@ -28,7 +28,7 @@ const createToast = (props: ToastProps) => {
   let styling = {};
   switch (variant) {
     case "destructive":
-      styling = { className: "bg-destructive text-destructive-foreground border-destructive/30" };
+      styling = { className: "bg-destructive text-destructive-foreground" };
       break;
     case "success":
       styling = { className: "bg-status-operational/20 text-status-operational border-status-operational/50" };
@@ -54,11 +54,6 @@ const createToast = (props: ToastProps) => {
       border: "1px solid",
       animationDuration: "0.5s",
       animationTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
-      boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
-      overflow: "hidden",
-      transform: "translateY(0) scale(1)",
-      opacity: 1,
-      transition: "transform 0.3s, opacity 0.3s"
     }
   });
 };
@@ -87,93 +82,32 @@ export const toast = Object.assign(createToast, {
       borderRadius: "0.75rem",
       border: "1px solid hsl(var(--destructive))",
       animationDuration: "0.5s",
-      boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
     },
-    onAutoClose: () => playToastSound("destructive"),
-    closeButton: true,
-    position: "top-right",
+    onAutoClose: () => playToastSound("destructive")
   }),
   success: (message: string) => sonnerToast.success(message, {
     style: {
       borderRadius: "0.75rem",
       border: "1px solid hsl(var(--status-operational))",
       animationDuration: "0.5s",
-      boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
     },
-    onAutoClose: () => playToastSound("success"),
-    closeButton: true,
-    position: "top-right",
+    onAutoClose: () => playToastSound("success")
   }),
-  information: (message: string) => sonnerToast.info(message, {
+  info: (message: string) => sonnerToast.info(message, {
     style: {
       borderRadius: "0.75rem",
       border: "1px solid hsl(var(--primary))",
       animationDuration: "0.5s",
-      boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
     },
-    onAutoClose: () => playToastSound("info"),
-    closeButton: true,
-    position: "top-right",
+    onAutoClose: () => playToastSound("info")
   }),
   warning: (message: string) => sonnerToast.warning(message, {
     style: {
       borderRadius: "0.75rem",
       border: "1px solid hsl(var(--status-degraded))",
       animationDuration: "0.5s",
-      boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
     },
-    onAutoClose: () => playToastSound("warning"),
-    closeButton: true,
-    position: "top-right",
+    onAutoClose: () => playToastSound("warning")
   }),
-  // German translations for common notifications
-  fehler: (message: string) => sonnerToast.error(message, {
-    style: {
-      borderRadius: "0.75rem",
-      border: "1px solid hsl(var(--destructive))",
-      animationDuration: "0.5s",
-      boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
-    },
-    onAutoClose: () => playToastSound("destructive"),
-    closeButton: true,
-    position: "top-right",
-  }),
-  erfolg: (message: string) => sonnerToast.success(message, {
-    style: {
-      borderRadius: "0.75rem",
-      border: "1px solid hsl(var(--status-operational))",
-      animationDuration: "0.5s",
-      boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
-    },
-    onAutoClose: () => playToastSound("success"),
-    closeButton: true,
-    position: "top-right",
-  }),
-  warnung: (message: string) => sonnerToast.warning(message, {
-    style: {
-      borderRadius: "0.75rem",
-      border: "1px solid hsl(var(--status-degraded))",
-      animationDuration: "0.5s",
-      boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
-    },
-    onAutoClose: () => playToastSound("warning"),
-    closeButton: true,
-    position: "top-right",
-  }),
-  // Renamed to "information" to avoid duplicate property names
-  information: (message: string) => sonnerToast.info(message, {
-    style: {
-      borderRadius: "0.75rem",
-      border: "1px solid hsl(var(--primary))",
-      animationDuration: "0.5s",
-      boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
-    },
-    onAutoClose: () => playToastSound("info"),
-    closeButton: true,
-    position: "top-right",
-  })
+  ...sonnerToast
 });
-
-// Extend with sonnerToast properties but remove the duplicate 'info' method
-const { info: _, ...restSonnerToast } = sonnerToast;
-Object.assign(toast, restSonnerToast);

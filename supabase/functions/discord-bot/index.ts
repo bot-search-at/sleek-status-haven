@@ -35,15 +35,6 @@ interface RequestData {
   channel_id?: string;
   prevStatus?: string;
   currentStatus?: string;
-  mentionEveryone?: boolean;
-  config?: {
-    title?: string;
-    color?: string;
-    useCustomEmojis?: boolean;
-    showTimestamp?: boolean;
-    footerText?: string;
-    groupServices?: boolean;
-  };
 }
 
 interface SystemStatus {
@@ -56,17 +47,7 @@ let lastKnownStatus: SystemStatus | null = null;
 // Track last embed update time
 let lastEmbedUpdateTime: Date | null = null;
 
-// Default status emojis
-const defaultStatusEmojis: Record<string, string> = {
-  operational: "🟢",
-  degraded: "🟡",
-  partial_outage: "🟠",
-  major_outage: "🔴",
-  maintenance: "🔵"
-};
-
-// Custom Discord emojis
-const customStatusEmojis: Record<string, string> = {
+const statusEmojis: Record<string, string> = {
   operational: "<:green:1356281396007670025>",
   degraded: "<:reed:1356281418682077234>",
   partial_outage: "<:reed:1356281418682077234>",
@@ -163,53 +144,6 @@ serve(async (req) => {
       );
     }
 
-    // Add a new action to clear historical messages
-    if (action === 'clear-historical-messages') {
-      try {
-        // Get the most recent message to keep active
-        const { data: mostRecent, error: recentError } = await supabaseClient
-          .from('discord_status_messages')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-          
-        if (recentError) {
-          throw new Error(`Failed to get most recent message: ${recentError.message}`);
-        }
-        
-        // Delete all but the most recent message from the database
-        if (mostRecent) {
-          const { error: deleteError } = await supabaseClient
-            .from('discord_status_messages')
-            .delete()
-            .neq('id', mostRecent.id);
-            
-          if (deleteError) {
-            throw new Error(`Failed to delete historical messages: ${deleteError.message}`);
-          }
-        }
-        
-        return new Response(
-          JSON.stringify({ 
-            success: true, 
-            message: 'Historische Nachrichten gelöscht', 
-            keptMessage: mostRecent?.id
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-        );
-      } catch (error: any) {
-        console.error('Error clearing historical messages:', error);
-        return new Response(
-          JSON.stringify({ 
-            error: 'Fehler beim Löschen historischer Nachrichten', 
-            details: error.message 
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-        );
-      }
-    }
-
     // New action to periodically update the embed
     if (action === 'auto-update-embed') {
       // Check if it's been at least 1 minute since last update
@@ -228,12 +162,8 @@ serve(async (req) => {
       console.log('Auto-updating embed message...');
       
       try {
-        // Trigger update-status action internally with any custom embed config
-        const updateResult = await performStatusUpdate(
-          supabaseClient, 
-          botConfig, 
-          requestData.config
-        );
+        // Trigger update-status action internally
+        const updateResult = await performStatusUpdate(supabaseClient, botConfig);
         
         return new Response(
           JSON.stringify({ 
@@ -443,11 +373,7 @@ serve(async (req) => {
     // Endpoint to initialize and update services in Discord
     if (action === 'update-status') {
       try {
-        const result = await performStatusUpdate(
-          supabaseClient, 
-          botConfig, 
-          requestData.config
-        );
+        const result = await performStatusUpdate(supabaseClient, botConfig);
         return new Response(
           JSON.stringify(result),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
@@ -542,8 +468,7 @@ serve(async (req) => {
               username: botData.username || "Bot Search_AT",
               discriminator: botData.discriminator,
               id: botData.id,
-              avatar: botData.avatar,
-              guild_id: botConfig.guild_ids?.[0]
+              avatar: botData.avatar
             }
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
@@ -564,7 +489,7 @@ serve(async (req) => {
 
     // Endpoint to send a custom announcement
     if (action === 'send-announcement') {
-      const { title, content, color, mentionEveryone } = requestData;
+      const { title, content, color } = requestData;
       
       if (!title || !content) {
         return new Response(
@@ -609,7 +534,6 @@ serve(async (req) => {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            content: mentionEveryone ? "@everyone" : "",
             embeds: [announcementEmbed]
           })
         });
@@ -654,11 +578,7 @@ serve(async (req) => {
     }
 
     // Helper function to perform status update
-    async function performStatusUpdate(
-      supabaseClient: any, 
-      botConfig: BotConfig,
-      customConfig?: RequestData['config']
-    ) {
+    async function performStatusUpdate(supabaseClient: any, botConfig: BotConfig) {
       console.log('Performing status update...');
       
       // Fetch all services
@@ -687,89 +607,60 @@ serve(async (req) => {
         maintenance: 0x5865F2   // Blue/Purple
       };
 
-      // Use custom embed config if provided, otherwise use defaults
-      const embedConfig = {
-        title: customConfig?.title || "Status-Dashboard",
-        color: customConfig?.color ? parseInt(customConfig.color.replace('#', '0x')) : statusColors[systemStatus],
-        useCustomEmojis: customConfig?.useCustomEmojis !== undefined ? customConfig.useCustomEmojis : true,
-        showTimestamp: customConfig?.showTimestamp !== undefined ? customConfig.showTimestamp : true,
-        footerText: customConfig?.footerText || "Weitere Details auf der Statusseite",
-        groupServices: customConfig?.groupServices !== undefined ? customConfig.groupServices : true
+      // Status emojis for text
+      const statusEmojis: Record<string, string> = {
+        operational: "<:green:1356281396007670025>",
+        degraded: "<:reed:1356281418682077234>",
+        partial_outage: "<:reed:1356281418682077234>",
+        major_outage: "<:reed:1356281418682077234>",
+        maintenance: "<:blue:1356281439053807908>"
       };
 
-      // Select appropriate emoji set based on config
-      const statusEmojis = embedConfig.useCustomEmojis ? customStatusEmojis : defaultStatusEmojis;
+      // Group services by their group
+      const serviceGroups: Record<string, any[]> = {};
+      services.forEach((service: any) => {
+        if (!serviceGroups[service.service_group]) {
+          serviceGroups[service.service_group] = [];
+        }
+        serviceGroups[service.service_group].push(service);
+      });
 
-      // Create embed fields for services based on the grouping preference
+      // Create embed fields for each service group
       const embedFields = [];
       
-      if (embedConfig.groupServices) {
-        // Group services by their group
-        const serviceGroups: Record<string, any[]> = {};
-        services.forEach((service: any) => {
-          if (!serviceGroups[service.service_group]) {
-            serviceGroups[service.service_group] = [];
-          }
-          serviceGroups[service.service_group].push(service);
-        });
-
-        // Create fields for each group
-        Object.entries(serviceGroups).forEach(([group, groupServices]) => {
-          let fieldValue = '';
-          groupServices.forEach((service: any) => {
-            const emoji = statusEmojis[service.status] || "❓";
-            const statusText = service.status === "operational" ? "Betriebsbereit" : 
+      Object.entries(serviceGroups).forEach(([group, groupServices]) => {
+        let fieldValue = '';
+        groupServices.forEach((service: any) => {
+          const emoji = statusEmojis[service.status] || "❓";
+          const statusText = service.status === "operational" ? "Betriebsbereit" : 
                            service.status === "degraded" ? "Beeinträchtigt" : 
                            service.status === "partial_outage" ? "Teilausfall" : 
                            service.status === "major_outage" ? "Schwerer Ausfall" : 
                            service.status === "maintenance" ? "Wartung" : "Unbekannt";
-            fieldValue += `${emoji} **${service.name}**: ${statusText}\n`;
-          });
-
-          embedFields.push({
-            name: group,
-            value: fieldValue,
-            inline: false
-          });
-        });
-      } else {
-        // List all services without grouping
-        let fieldValue = '';
-        services.forEach((service: any) => {
-          const emoji = statusEmojis[service.status] || "❓";
-          const statusText = service.status === "operational" ? "Betriebsbereit" : 
-                         service.status === "degraded" ? "Beeinträchtigt" : 
-                         service.status === "partial_outage" ? "Teilausfall" : 
-                         service.status === "major_outage" ? "Schwerer Ausfall" : 
-                         service.status === "maintenance" ? "Wartung" : "Unbekannt";
           fieldValue += `${emoji} **${service.name}**: ${statusText}\n`;
         });
-        
+
         embedFields.push({
-          name: "Services",
+          name: group,
           value: fieldValue,
           inline: false
         });
-      }
+      });
 
       // Create main embed
       const statusTitle = systemStatus === "operational" ? "Alle Systeme betriebsbereit" : 
                systemStatus === "degraded" ? "Einige Systeme beeinträchtigt" : "Systemausfall erkannt";
 
       const mainEmbed: DiscordEmbed = {
-        title: embedConfig.title || statusTitle,
+        title: statusTitle,
         description: "Aktuelle Status-Informationen zu allen Diensten",
-        color: embedConfig.color || statusColors[systemStatus] || 0x5865F2,
+        color: statusColors[systemStatus] || 0x5865F2,
         fields: embedFields,
         footer: {
-          text: `Letztes Update: ${new Date().toLocaleString('de-DE')} • ${embedConfig.footerText}`
-        }
+          text: `Letztes Update: ${new Date().toLocaleString('de-DE')} • Weitere Details auf der Statusseite`
+        },
+        timestamp: new Date().toISOString()
       };
-
-      // Add timestamp if enabled
-      if (embedConfig.showTimestamp) {
-        mainEmbed.timestamp = new Date().toISOString();
-      }
 
       const embeds = [mainEmbed];
       
