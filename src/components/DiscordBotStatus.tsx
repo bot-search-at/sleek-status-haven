@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -909,4 +910,331 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
                                 <Input
                                   id="embedTitle"
                                   value={customEmbedConfig.title}
-                                  onChange
+                                  onChange={(e) => setCustomEmbedConfig({
+                                    ...customEmbedConfig,
+                                    title: e.target.value
+                                  })}
+                                  className="col-span-3"
+                                />
+                              </div>
+                              
+                              <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="embedColor" className="text-right">
+                                  Farbe
+                                </Label>
+                                <div className="col-span-3 flex gap-2 items-center">
+                                  <input 
+                                    type="color" 
+                                    id="embedColor"
+                                    value={customEmbedConfig.color}
+                                    onChange={(e) => setCustomEmbedConfig({
+                                      ...customEmbedConfig,
+                                      color: e.target.value
+                                    })}
+                                    className="w-10 h-8 rounded border border-input"
+                                  />
+                                  <span className="text-sm">
+                                    {customEmbedConfig.color}
+                                  </span>
+                                </div>
+                              </div>
+                              
+                              <div className="grid grid-cols-4 items-center gap-4">
+                                <Label className="text-right">
+                                  Emojis
+                                </Label>
+                                <div className="flex items-center space-x-2 col-span-3">
+                                  <Switch 
+                                    id="useCustomEmojis"
+                                    checked={customEmbedConfig.useCustomEmojis}
+                                    onCheckedChange={(checked) => setCustomEmbedConfig({
+                                      ...customEmbedConfig,
+                                      useCustomEmojis: checked
+                                    })}
+                                  />
+                                  <Label htmlFor="useCustomEmojis">
+                                    Custom Emojis verwenden
+                                  </Label>
+                                </div>
+                              </div>
+                              
+                              <div className="grid grid-cols-4 items-center gap-4">
+                                <Label className="text-right">
+                                  Zeitstempel
+                                </Label>
+                                <div className="flex items-center space-x-2 col-span-3">
+                                  <Switch 
+                                    id="showTimestamp"
+                                    checked={customEmbedConfig.showTimestamp}
+                                    onCheckedChange={(checked) => setCustomEmbedConfig({
+                                      ...customEmbedConfig,
+                                      showTimestamp: checked
+                                    })}
+                                  />
+                                  <Label htmlFor="showTimestamp">
+                                    Zeitstempel anzeigen
+                                  </Label>
+                                </div>
+                              </div>
+                              
+                              <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="footerText" className="text-right">
+                                  Footer
+                                </Label>
+                                <Input
+                                  id="footerText"
+                                  value={customEmbedConfig.footerText}
+                                  onChange={(e) => setCustomEmbedConfig({
+                                    ...customEmbedConfig,
+                                    footerText: e.target.value
+                                  })}
+                                  className="col-span-3"
+                                />
+                              </div>
+                              
+                              <div className="grid grid-cols-4 items-center gap-4">
+                                <Label className="text-right">
+                                  Gruppierung
+                                </Label>
+                                <div className="flex items-center space-x-2 col-span-3">
+                                  <Switch 
+                                    id="groupServices"
+                                    checked={customEmbedConfig.groupServices}
+                                    onCheckedChange={(checked) => setCustomEmbedConfig({
+                                      ...customEmbedConfig,
+                                      groupServices: checked
+                                    })}
+                                  />
+                                  <Label htmlFor="groupServices">
+                                    Dienste nach Gruppe anzeigen
+                                  </Label>
+                                </div>
+                              </div>
+                              
+                              <div className="flex justify-end mt-4">
+                                <Button onClick={saveEmbedSettings}>
+                                  Speichern
+                                </Button>
+                              </div>
+                            </div>
+                          </TabsContent>
+                          
+                          <TabsContent value="notifications">
+                            <div className="space-y-4 py-2">
+                              <div className="grid grid-cols-4 items-center gap-4">
+                                <Label className="text-right">
+                                  Ausfälle
+                                </Label>
+                                <div className="flex items-center space-x-2 col-span-3">
+                                  <Switch 
+                                    id="notifyOutages"
+                                    checked={notifications.outages}
+                                    onCheckedChange={(checked) => setNotifications({
+                                      ...notifications,
+                                      outages: checked
+                                    })}
+                                  />
+                                  <Label htmlFor="notifyOutages">
+                                    Bei Ausfällen benachrichtigen
+                                  </Label>
+                                </div>
+                              </div>
+                              
+                              <div className="grid grid-cols-4 items-center gap-4">
+                                <Label className="text-right">
+                                  Beeinträchtigungen
+                                </Label>
+                                <div className="flex items-center space-x-2 col-span-3">
+                                  <Switch 
+                                    id="notifyDegraded"
+                                    checked={notifications.degraded}
+                                    onCheckedChange={(checked) => setNotifications({
+                                      ...notifications,
+                                      degraded: checked
+                                    })}
+                                  />
+                                  <Label htmlFor="notifyDegraded">
+                                    Bei Beeinträchtigungen benachrichtigen
+                                  </Label>
+                                </div>
+                              </div>
+                              
+                              <div className="grid grid-cols-4 items-center gap-4">
+                                <Label className="text-right">
+                                  Wartungen
+                                </Label>
+                                <div className="flex items-center space-x-2 col-span-3">
+                                  <Switch 
+                                    id="notifyMaintenance"
+                                    checked={notifications.maintenance}
+                                    onCheckedChange={(checked) => setNotifications({
+                                      ...notifications,
+                                      maintenance: checked
+                                    })}
+                                  />
+                                  <Label htmlFor="notifyMaintenance">
+                                    Bei Wartungen benachrichtigen
+                                  </Label>
+                                </div>
+                              </div>
+                              
+                              <div className="grid grid-cols-4 items-center gap-4">
+                                <Label className="text-right">
+                                  Wiederherstellungen
+                                </Label>
+                                <div className="flex items-center space-x-2 col-span-3">
+                                  <Switch 
+                                    id="notifyRecovery"
+                                    checked={notifications.recovered}
+                                    onCheckedChange={(checked) => setNotifications({
+                                      ...notifications,
+                                      recovered: checked
+                                    })}
+                                  />
+                                  <Label htmlFor="notifyRecovery">
+                                    Bei Wiederherstellungen benachrichtigen
+                                  </Label>
+                                </div>
+                              </div>
+                              
+                              <div className="flex justify-end mt-4">
+                                <Button onClick={saveNotificationSettings}>
+                                  Speichern
+                                </Button>
+                              </div>
+                            </div>
+                          </TabsContent>
+                          
+                          <TabsContent value="advanced">
+                            <div className="space-y-4 py-2">
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm font-medium">Discord Kanal</span>
+                                <div className="flex items-center space-x-2">
+                                  <code className="text-xs bg-secondary px-2 py-1 rounded">
+                                    {botConfig.status_channel_id || "Nicht konfiguriert"}
+                                  </code>
+                                  {botInfo && botInfo.guild_id && botConfig.status_channel_id && (
+                                    <Link 
+                                      className="text-primary" 
+                                      to={`https://discord.com/channels/${botInfo.guild_id}/${botConfig.status_channel_id}`} 
+                                      target="_blank"
+                                    >
+                                      <ExternalLink className="h-4 w-4" />
+                                    </Link>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              <Separator />
+                              
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm font-medium">Bot Logs</span>
+                                <div>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => setShowLogs(!showLogs)}
+                                  >
+                                    {showLogs ? (
+                                      <>
+                                        <EyeOff className="mr-2 h-4 w-4" />
+                                        Verbergen
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Eye className="mr-2 h-4 w-4" />
+                                        Anzeigen
+                                      </>
+                                    )}
+                                  </Button>
+                                </div>
+                              </div>
+                              
+                              {showLogs && (
+                                <div className="bg-secondary/30 rounded-md p-2 h-32 overflow-y-auto text-xs font-mono">
+                                  {botLogs.length > 0 ? (
+                                    botLogs.map((log, index) => (
+                                      <div key={index} className="py-0.5">{log}</div>
+                                    ))
+                                  ) : (
+                                    <span className="text-muted-foreground">Keine Logs vorhanden</span>
+                                  )}
+                                </div>
+                              )}
+                              
+                              <Separator />
+                              
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm font-medium">Status-Verlauf</span>
+                                <div>
+                                  <Badge variant="outline" className="h-5">
+                                    <History className="mr-1 h-3 w-3" />
+                                    {botStatusHistory.length} Einträge
+                                  </Badge>
+                                </div>
+                              </div>
+                              
+                              <div className="bg-secondary/30 rounded-md p-2 overflow-hidden">
+                                {botStatusHistory.length > 0 ? (
+                                  <div className="flex flex-nowrap gap-1">
+                                    {botStatusHistory.map((entry, index) => (
+                                      <Tooltip key={index}>
+                                        <TooltipTrigger asChild>
+                                          <div 
+                                            className={`h-2 w-4 rounded-sm ${entry.status === "online" ? "bg-status-operational" : "bg-status-major"}`}
+                                          ></div>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <div className="text-xs">
+                                            {entry.timestamp.toLocaleTimeString('de-DE')}
+                                            <span className="ml-2">
+                                              {entry.status === "online" ? "Online" : "Offline"}
+                                            </span>
+                                          </div>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">Keine Verlaufsdaten</span>
+                                )}
+                              </div>
+                              
+                              <Separator />
+                              
+                              <div className="pt-2">
+                                <Button 
+                                  variant="destructive" 
+                                  size="sm"
+                                  className="w-full"
+                                  onClick={clearHistoricalMessages}
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Alte Nachrichten löschen
+                                </Button>
+                              </div>
+                            </div>
+                          </TabsContent>
+                        </Tabs>
+                      </DialogContent>
+                    </Dialog>
+                    
+                    <Button 
+                      variant={showLogs ? "default" : "outline"} 
+                      size="sm" 
+                      className="w-1/2 flex items-center justify-center"
+                      onClick={() => setShowLogs(!showLogs)}
+                    >
+                      {showLogs ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
+                      {showLogs ? "Logs ausblenden" : "Logs anzeigen"}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </TooltipProvider>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
