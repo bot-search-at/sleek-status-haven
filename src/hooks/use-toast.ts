@@ -109,7 +109,7 @@ export const toast = Object.assign(createToast, {
     },
     onAutoClose: () => playToastSound("warning")
   }),
-  // Füge den Rest der sonnerToast-Methoden hinzu
+  // Add the rest of sonnerToast methods
   dismiss: sonnerToast.dismiss,
   promise: sonnerToast.promise,
   custom: sonnerToast.custom,
