@@ -21,8 +21,8 @@ import {
   Trash2,
   Eye,
   EyeOff,
-  Link,
-  History
+  History,
+  Link as ExternalLink
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -98,6 +98,18 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
   const [botStatusHistory, setBotStatusHistory] = useState<{ timestamp: Date; status: string }[]>([]);
   const { toast } = useToast();
   const { user } = useAuth();
+  
+  // Define getSystemStatus function before it's used
+  const getSystemStatus = () => {
+    if (services.some(s => s.status === "major_outage")) {
+      return "outage";
+    } else if (services.some(s => ["degraded", "partial_outage"].includes(s.status))) {
+      return "degraded";
+    } else {
+      return "operational";
+    }
+  };
+  
   const systemStatus = getSystemStatus();
 
   const loadBotStatus = async () => {
@@ -333,16 +345,6 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
       addLogEntry("Bot-Status-Komponente entladen");
     };
   }, []);
-
-  const getSystemStatus = () => {
-    if (services.some(s => s.status === "major_outage")) {
-      return "outage";
-    } else if (services.some(s => ["degraded", "partial_outage"].includes(s.status))) {
-      return "degraded";
-    } else {
-      return "operational";
-    }
-  };
 
   const formatLastUpdated = (dateString: string | null) => {
     if (!dateString) return "Nie";
@@ -1114,13 +1116,14 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
                                     {botConfig.status_channel_id || "Nicht konfiguriert"}
                                   </code>
                                   {botInfo && botInfo.guild_id && botConfig.status_channel_id && (
-                                    <Link 
+                                    <a 
                                       className="text-primary" 
-                                      to={`https://discord.com/channels/${botInfo.guild_id}/${botConfig.status_channel_id}`} 
+                                      href={`https://discord.com/channels/${botInfo.guild_id}/${botConfig.status_channel_id}`} 
                                       target="_blank"
+                                      rel="noopener noreferrer"
                                     >
                                       <ExternalLink className="h-4 w-4" />
-                                    </Link>
+                                    </a>
                                   )}
                                 </div>
                               </div>
