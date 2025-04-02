@@ -97,6 +97,7 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
   const [botStatusHistory, setBotStatusHistory] = useState<{ timestamp: Date; status: string }[]>([]);
   const { toast } = useToast();
   const { user } = useAuth();
+  const systemStatus = getSystemStatus();
 
   const loadBotStatus = async () => {
     setIsChecking(true);
@@ -908,4 +909,4 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
                                 <Input
                                   id="embedTitle"
                                   value={customEmbedConfig.title}
-                                  onChange={(e) => setCustomEmbedConfig({
+                                  onChange

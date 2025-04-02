@@ -170,6 +170,9 @@ export const toast = Object.assign(createToast, {
     onAutoClose: () => playToastSound("info"),
     closeButton: true,
     position: "top-right",
-  }),
-  ...sonnerToast
+  })
 });
+
+// Extend with sonnerToast properties but remove the duplicate 'info' method
+const { info: _, ...restSonnerToast } = sonnerToast;
+Object.assign(toast, restSonnerToast);
