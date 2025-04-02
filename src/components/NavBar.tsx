@@ -2,12 +2,11 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { Bell, ExternalLink, LogOut, Menu, Settings as SettingsIcon } from "lucide-react";
-import { useState } from "react";
-import { cn } from "@/lib/utils";
+import { Bell, LogOut, Menu, Settings as SettingsIcon } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/context/AuthContext";
 import { SubscribeDialog } from "@/components/SubscribeDialog";
+import { cn } from "@/lib/utils";
 
 export function NavBar() {
   const location = useLocation();

@@ -4,10 +4,8 @@ import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 
-// Use strict mode to catch potential issues during development
+// Create root element
 const root = createRoot(document.getElementById("root")!);
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+
+// Render app without strict mode to prevent double rendering
+root.render(<App />);
