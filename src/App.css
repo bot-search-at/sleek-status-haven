@@ -38,11 +38,14 @@
 .card {
   padding: 2em;
   transition: all 0.3s ease;
+  border-radius: 1.25rem;
+  background: hsl(var(--card));
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
 }
 
 .card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 10px 25px -5px rgba(var(--primary-rgb), 0.1);
+  box-shadow: 0 15px 35px -5px rgba(var(--primary-rgb), 0.15);
 }
 
 .read-the-docs {
@@ -109,7 +112,7 @@ button::after, a::after {
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(120deg, rgba(255,255,255,0) 30%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0) 70%);
+  background: linear-gradient(120deg, rgba(255,255,255,0) 30%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0) 70%);
   transform: translateX(-100%);
   transition: transform 0.6s;
 }
@@ -124,7 +127,7 @@ button:hover::after, a:hover::after {
 }
 
 .hover-lift-up:hover {
-  transform: translateY(-6px);
+  transform: translateY(-8px);
 }
 
 /* Fancy divider */
@@ -148,4 +151,132 @@ button:hover::after, a:hover::after {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* Enhanced glassomorphism */
+.glass-card {
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+/* Pulsing animation */
+@keyframes pulse-glow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(var(--primary-rgb), 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(var(--primary-rgb), 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(var(--primary-rgb), 0);
+  }
+}
+
+.pulse-animation {
+  animation: pulse-glow 2s infinite;
+}
+
+/* Enhanced Discord card */
+.discord-card {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.discord-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(114, 137, 218, 0.05) 0%, rgba(114, 137, 218, 0) 70%);
+  opacity: 0;
+  z-index: -1;
+  transform: translate(-50%, -50%);
+  transition: opacity 0.3s ease;
+}
+
+.discord-card:hover::before {
+  opacity: 1;
+}
+
+.discord-card:hover {
+  transform: translateY(-5px) scale(1.01);
+  box-shadow: 0 15px 35px -5px rgba(114, 137, 218, 0.15);
+}
+
+.border-discord-blurple {
+  border-color: rgba(114, 137, 218, 0.3);
+}
+
+/* Floating effect */
+.floating {
+  animation: floating 3s ease-in-out infinite;
+}
+
+@keyframes floating {
+  0% {
+    transform: translate(0, 0px);
+  }
+  50% {
+    transform: translate(0, -8px);
+  }
+  100% {
+    transform: translate(0, 0px);
+  }
+}
+
+/* Shiny button effect */
+.btn-shiny {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, hsl(var(--primary)/90%), hsl(var(--primary)/70%));
+  z-index: 1;
+  box-shadow: 0 5px 15px -5px hsl(var(--primary)/40%);
+}
+
+.btn-shiny::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+  transform: rotate(45deg) translateY(-200%);
+  animation: shine 3s infinite;
+  z-index: -1;
+}
+
+@keyframes shine {
+  0% {
+    transform: rotate(45deg) translateY(-200%);
+  }
+  100% {
+    transform: rotate(45deg) translateY(200%);
+  }
+}
+
+/* Enhanced dashboard widgets */
+.dashboard-widget {
+  border-radius: 1.25rem;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.dashboard-widget:hover {
+  box-shadow: 0 10px 35px -10px rgba(var(--primary-rgb), 0.15);
+  border-color: hsl(var(--primary)/30%);
+}
+
+.dashboard-widget-header {
+  padding: 1rem 1.5rem;
+  background: linear-gradient(to right, hsl(var(--card)), hsl(var(--border)/20%));
+  border-bottom: 1px solid hsl(var(--border));
 }
