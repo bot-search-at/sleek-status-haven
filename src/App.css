@@ -1,151 +1,328 @@
 
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
-  position: relative;
-}
+/* ... keep existing code */
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em rgba(var(--primary-rgb), 0.6));
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
-
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
+/* Erweiterte Animation für Karten */
 .card {
-  padding: 2em;
-  transition: all 0.3s ease;
-}
-
-.card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 25px -5px rgba(var(--primary-rgb), 0.1);
-}
-
-.read-the-docs {
-  color: hsl(var(--muted-foreground));
-  transition: color 0.3s ease;
-}
-
-.read-the-docs:hover {
-  color: hsl(var(--primary));
-}
-
-/* Modern UI effects */
-.blur-bg {
-  position: absolute;
-  top: -10%;
-  right: -10%;
-  width: 40%;
-  height: 40%;
-  background: radial-gradient(circle, rgba(var(--primary-rgb), 0.1) 0%, rgba(var(--primary-rgb), 0) 70%);
-  filter: blur(50px);
-  border-radius: 100%;
-  z-index: -1;
-  animation: blob 15s infinite alternate;
-}
-
-.blur-bg-2 {
-  position: absolute;
-  bottom: -5%;
-  left: -5%;
-  width: 30%;
-  height: 30%;
-  background: radial-gradient(circle, rgba(var(--primary-rgb), 0.05) 0%, rgba(var(--primary-rgb), 0) 70%);
-  filter: blur(40px);
-  border-radius: 100%;
-  z-index: -1;
-  animation: blob 18s infinite alternate-reverse;
-}
-
-@keyframes blob {
-  0% {
-    transform: translate(0, 0) scale(1);
-  }
-  33% {
-    transform: translate(5%, -5%) scale(1.1);
-  }
-  66% {
-    transform: translate(-5%, 5%) scale(0.9);
-  }
-  100% {
-    transform: translate(0, 0) scale(1);
-  }
-}
-
-/* Interactive elemnts */
-button, a {
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   position: relative;
   overflow: hidden;
 }
 
-button::after, a::after {
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(
+    to bottom right,
+    rgba(var(--primary-rgb), 0.05),
+    rgba(var(--primary-rgb), 0.01)
+  );
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px -5px rgba(var(--primary-rgb), 0.15);
+}
+
+.card:hover::before {
+  opacity: 1;
+}
+
+/* Discord-Karte speziell stylen */
+.discord-card {
+  background: linear-gradient(
+    165deg,
+    hsl(var(--background)) 0%,
+    hsl(var(--muted)/0.3) 100%
+  );
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.75rem;
+}
+
+.discord-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(
+    to bottom right,
+    rgba(88, 101, 242, 0.05),
+    rgba(88, 101, 242, 0.01)
+  );
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  border-radius: 0.75rem;
+}
+
+.discord-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px -6px rgba(88, 101, 242, 0.2);
+}
+
+.discord-card:hover::before {
+  opacity: 1;
+}
+
+/* Verbesserte Animation für Buttons */
+button, a.button {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+button::after, a.button::after {
   content: '';
   position: absolute;
   top: 0;
-  left: 0;
+  left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(120deg, rgba(255,255,255,0) 30%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0) 70%);
-  transform: translateX(-100%);
-  transition: transform 0.6s;
+  background: linear-gradient(
+    90deg, 
+    rgba(255,255,255,0) 0%, 
+    rgba(255,255,255,0.1) 50%, 
+    rgba(255,255,255,0) 100%
+  );
+  transition: left 0.8s cubic-bezier(0.19, 1, 0.22, 1);
+  pointer-events: none;
 }
 
-button:hover::after, a:hover::after {
-  transform: translateX(100%);
+button:hover::after, a.button:hover::after {
+  left: 100%;
 }
 
-/* Sophisticated hover effects */
-.hover-lift-up {
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+/* Verbesserte Badges */
+.badge {
+  transition: all 0.3s ease;
 }
 
-.hover-lift-up:hover {
-  transform: translateY(-6px);
+.badge:hover {
+  transform: scale(1.05);
 }
 
-/* Fancy divider */
-.fancy-divider {
-  height: 1px;
-  background: linear-gradient(90deg, transparent, hsl(var(--primary)/30%), transparent);
-  margin: 2rem 0;
-}
-
-/* Loading animation */
-.loading-animation {
-  width: 2rem;
-  height: 2rem;
+/* Status-Indikatoren */
+.status-indicator {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  border: 2px solid hsl(var(--border));
-  border-top-color: hsl(var(--primary));
-  animation: spinner 0.8s linear infinite;
+  margin-right: 6px;
 }
 
-@keyframes spinner {
-  to {
-    transform: rotate(360deg);
+.status-operational {
+  background-color: hsl(var(--status-operational));
+  box-shadow: 0 0 8px hsl(var(--status-operational));
+}
+
+.status-degraded {
+  background-color: hsl(var(--status-degraded));
+  box-shadow: 0 0 8px hsl(var(--status-degraded));
+}
+
+.status-major {
+  background-color: hsl(var(--status-major));
+  box-shadow: 0 0 8px hsl(var(--status-major));
+}
+
+/* Glassmorphismus-Karten */
+.glass-card {
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.75rem;
+  transition: all 0.3s ease;
+}
+
+.glass-card:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-5px);
+  box-shadow: 0 10px 40px 0 rgba(31, 38, 135, 0.2);
+}
+
+/* Verbesserte Hervorhebungen */
+.highlight-text {
+  position: relative;
+  display: inline-block;
+}
+
+.highlight-text::before {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 8px;
+  background-color: rgba(var(--primary-rgb), 0.2);
+  z-index: -1;
+  border-radius: 4px;
+  transform: skewX(-12deg);
+}
+
+/* Sanfte Seitenladeanimationen */
+.page-transition-enter {
+  opacity: 0;
+}
+
+.page-transition-enter-active {
+  opacity: 1;
+  transition: opacity 300ms, transform 300ms;
+}
+
+.page-transition-exit {
+  opacity: 1;
+}
+
+.page-transition-exit-active {
+  opacity: 0;
+  transition: opacity 300ms, transform 300ms;
+}
+
+/* Verbesserte Animation für ServiceCards */
+.service-card {
+  transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+.service-card:hover {
+  transform: translateY(-5px) scale(1.02);
+}
+
+/* Border Animation */
+.animate-border {
+  position: relative;
+  overflow: hidden;
+}
+
+.animate-border::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, hsl(var(--primary)));
+  animation: animate-border 3s linear infinite;
+}
+
+@keyframes animate-border {
+  0% {
+    left: -100%;
   }
+  50% {
+    left: 100%;
+  }
+  100% {
+    left: -100%;
+  }
+}
+
+/* Pulse Animation für Statusindikatoren */
+.pulse-animation {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(var(--primary-rgb), 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(var(--primary-rgb), 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(var(--primary-rgb), 0);
+  }
+}
+
+/* Discord Blurple Color */
+.border-discord-blurple {
+  border-color: rgb(88, 101, 242);
+}
+
+.text-discord-blurple {
+  color: rgb(88, 101, 242);
+}
+
+.bg-discord-blurple {
+  background-color: rgb(88, 101, 242);
+}
+
+/* Glas-Container für schwebende Elemente */
+.floating-container {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+}
+
+/* Extra Animationen */
+.heartbeat {
+  animation: heartbeat 1.5s ease-in-out infinite;
+}
+
+@keyframes heartbeat {
+  0% { transform: scale(1); }
+  14% { transform: scale(1.15); }
+  28% { transform: scale(1); }
+  42% { transform: scale(1.15); }
+  70% { transform: scale(1); }
+}
+
+/* Status Badge Animationen */
+.status-badge {
+  transition: all 0.3s ease;
+}
+
+.status-badge-operational {
+  background-color: rgba(52, 199, 89, 0.1);
+  color: rgba(52, 199, 89, 1);
+  border: 1px solid rgba(52, 199, 89, 0.2);
+}
+
+.status-badge-degraded {
+  background-color: rgba(255, 204, 0, 0.1);
+  color: rgba(255, 204, 0, 1);
+  border: 1px solid rgba(255, 204, 0, 0.2);
+}
+
+.status-badge-outage {
+  background-color: rgba(255, 59, 48, 0.1);
+  color: rgba(255, 59, 48, 1);
+  border: 1px solid rgba(255, 59, 48, 0.2);
+}
+
+/* Tooltip-Stile */
+.custom-tooltip {
+  position: relative;
+  display: inline-block;
+}
+
+.custom-tooltip .tooltip-text {
+  visibility: hidden;
+  width: 200px;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  text-align: center;
+  border-radius: 6px;
+  padding: 5px 10px;
+  position: absolute;
+  z-index: 1;
+  bottom: 125%;
+  left: 50%;
+  margin-left: -100px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+  border: 1px solid hsl(var(--border));
+}
+
+.custom-tooltip:hover .tooltip-text {
+  visibility: visible;
+  opacity: 1;
 }

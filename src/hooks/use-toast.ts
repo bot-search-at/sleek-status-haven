@@ -109,5 +109,10 @@ export const toast = Object.assign(createToast, {
     },
     onAutoClose: () => playToastSound("warning")
   }),
-  ...sonnerToast
+  // Füge den Rest der sonnerToast-Methoden hinzu
+  dismiss: sonnerToast.dismiss,
+  promise: sonnerToast.promise,
+  custom: sonnerToast.custom,
+  message: sonnerToast.message,
+  loading: sonnerToast.loading
 });
