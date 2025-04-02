@@ -16,7 +16,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ActivitySquare, Bell, Check, CheckCircle, ChevronsUpDown, Cloud, CogIcon, ExternalLink, Github, Globe, Key, Mail, MessageSquare, RefreshCw, Save, Shield, User, UserCog, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 import { checkIsAdmin } from "@/utils/admin";
-import { supabase } from "@/integrations/supabase/client";
+import { getProfile, updateProfile } from "@/lib/profiles";
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState("account");
@@ -48,34 +48,39 @@ export default function Settings() {
         const adminStatus = await checkIsAdmin(user.id);
         setIsAdmin(adminStatus);
         
-        // Fetch profile info
+        // Fetch profile info using our custom profile API
         try {
-          // Use the profiles table that exists in Supabase
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('username, display_name, avatar_url')
-            .eq('id', user.id)
-            .single();
+          const profileData = await getProfile(user.id);
           
-          if (data) {
+          if (profileData) {
             setProfileData({
-              username: data.username || "",
+              username: profileData.username || "",
               email: user.email || "",
-              displayName: data.display_name || "",
-              avatar: data.avatar_url || ""
+              displayName: profileData.display_name || "",
+              avatar: profileData.avatar_url || ""
             });
-          }
-          
-          if (error) {
-            console.error("Error fetching profile data:", error);
+          } else {
+            // If we couldn't get profile data, just use the email
+            setProfileData({
+              username: "",
+              email: user.email || "",
+              displayName: "",
+              avatar: ""
+            });
+            
             toast({
-              title: "Error",
-              description: "Could not load profile data",
-              variant: "destructive"
+              title: "Profile data not found",
+              description: "Your profile information couldn't be loaded",
+              variant: "warning"
             });
           }
         } catch (error) {
           console.error("Error loading profile data:", error);
+          toast({
+            title: "Error",
+            description: "Could not load profile data",
+            variant: "destructive"
+          });
         }
       }
     };
@@ -95,17 +100,14 @@ export default function Settings() {
     try {
       // If user is logged in, update their profile
       if (user) {
-        const { error } = await supabase
-          .from('profiles')
-          .update({
-            username: profileData.username,
-            display_name: profileData.displayName,
-            avatar_url: profileData.avatar
-          })
-          .eq('id', user.id);
+        const result = await updateProfile(user.id, {
+          username: profileData.username || null,
+          display_name: profileData.displayName || null,
+          avatar_url: profileData.avatar || null
+        });
           
-        if (error) {
-          throw error;
+        if (!result.success) {
+          throw new Error(result.error || "Unknown error");
         }
       }
       
@@ -114,11 +116,11 @@ export default function Settings() {
         description: "Your settings have been successfully updated.",
         variant: "success"
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving settings:", error);
       toast({
         title: "Error saving",
-        description: "Your settings could not be saved.",
+        description: error.message || "Your settings could not be saved.",
         variant: "destructive"
       });
     } finally {

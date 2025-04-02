@@ -1,7 +1,9 @@
+
 import { createContext, useContext, useEffect, useState } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { getProfile } from "@/lib/profiles";
 
 type AuthContextType = {
   user: User | null;
@@ -24,26 +26,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, currentSession) => {
+      async (event, currentSession) => {
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
         if (currentSession?.user) {
-          setTimeout(() => {
-            checkAdminStatus(currentSession.user.id);
-          }, 0);
+          await checkAdminStatus(currentSession.user.id);
         } else {
           setIsAdmin(false);
         }
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+    supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       
       if (currentSession?.user) {
-        checkAdminStatus(currentSession.user.id);
+        await checkAdminStatus(currentSession.user.id);
       }
       
       setIsLoading(false);
