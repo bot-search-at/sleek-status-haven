@@ -104,7 +104,7 @@ export const toast = Object.assign(createToast, {
     closeButton: true,
     position: "top-right",
   }),
-  info: (message: string) => sonnerToast.info(message, {
+  information: (message: string) => sonnerToast.info(message, {
     style: {
       borderRadius: "0.75rem",
       border: "1px solid hsl(var(--primary))",

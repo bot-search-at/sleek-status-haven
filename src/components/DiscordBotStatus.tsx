@@ -1,8 +1,8 @@
-
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Service } from "@/lib/types";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   AlertTriangle, 
   CheckCircle, 
@@ -49,6 +49,20 @@ interface DiscordBotStatusProps {
   services: Service[];
 }
 
+// Extended interface for botInfo
+interface BotInfo {
+  username?: string;
+  discriminator?: string;
+  avatar?: string;
+  id?: string;
+  guild_id?: string;
+}
+
+// Interface for bot configuration
+interface BotConfig {
+  status_channel_id?: string;
+}
+
 export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
   const [botEnabled, setBotEnabled] = useState<boolean>(false);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
@@ -57,7 +71,8 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
   const [isSending, setIsSending] = useState(false);
   const [isOnline, setIsOnline] = useState<boolean | null>(null);
   const [isChecking, setIsChecking] = useState(false);
-  const [botInfo, setBotInfo] = useState<{ username?: string; discriminator?: string; avatar?: string } | null>(null);
+  const [botInfo, setBotInfo] = useState<BotInfo | null>(null);
+  const [botConfig, setBotConfig] = useState<BotConfig>({});
   const [isAdmin, setIsAdmin] = useState(false);
   const [channelAccessible, setChannelAccessible] = useState(false);
   const [lastSystemCheck, setLastSystemCheck] = useState<Date | null>(null);
@@ -88,11 +103,14 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
     try {
       const { data: configData, error: configError } = await supabase
         .from('discord_bot_config')
-        .select('enabled')
+        .select('enabled, status_channel_id')
         .maybeSingle();
 
       if (!configError && configData) {
         setBotEnabled(configData.enabled || false);
+        setBotConfig({
+          status_channel_id: configData.status_channel_id
+        });
       }
 
       const { data: messageData, error: messageError } = await supabase
@@ -323,8 +341,6 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
       return "operational";
     }
   };
-
-  const systemStatus = getSystemStatus();
 
   const formatLastUpdated = (dateString: string | null) => {
     if (!dateString) return "Nie";
@@ -627,10 +643,10 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
           <div className="flex justify-between items-center">
             <span className="text-sm font-medium">Bot Name</span>
             <div className="flex items-center">
-              {botInfo?.avatar && (
+              {botInfo?.avatar && botInfo?.id && (
                 <div className="w-5 h-5 rounded-full overflow-hidden mr-2 border border-border">
                   <img 
-                    src={`https://cdn.discordapp.com/avatars/${botInfo?.id}/${botInfo?.avatar}.png`} 
+                    src={`https://cdn.discordapp.com/avatars/${botInfo.id}/${botInfo.avatar}.png`} 
                     alt="Bot Avatar" 
                     className="w-full h-full object-cover"
                   />
@@ -721,10 +737,10 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
             <div className="glass-card p-3 rounded-md text-xs backdrop-blur-sm">
               <div className="font-medium mb-1">Bot Information</div>
               <div className="flex items-center">
-                {botInfo.avatar && (
+                {botInfo.avatar && botInfo.id && (
                   <div className="w-8 h-8 rounded-full overflow-hidden mr-2 border border-[#5865F2]/30">
                     <img 
-                      src={`https://cdn.discordapp.com/avatars/${botInfo?.id}/${botInfo?.avatar}.png`} 
+                      src={`https://cdn.discordapp.com/avatars/${botInfo.id}/${botInfo.avatar}.png`} 
                       alt="Bot Avatar" 
                       className="w-full h-full object-cover"
                     />
@@ -893,337 +909,3 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
                                   id="embedTitle"
                                   value={customEmbedConfig.title}
                                   onChange={(e) => setCustomEmbedConfig({
-                                    ...customEmbedConfig,
-                                    title: e.target.value
-                                  })}
-                                  className="col-span-3"
-                                />
-                              </div>
-
-                              <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="embedColor" className="text-right">
-                                  Farbe
-                                </Label>
-                                <div className="col-span-3 flex gap-2 items-center">
-                                  <input 
-                                    type="color" 
-                                    id="embedColor"
-                                    value={customEmbedConfig.color}
-                                    onChange={(e) => setCustomEmbedConfig({
-                                      ...customEmbedConfig,
-                                      color: e.target.value
-                                    })}
-                                    className="w-10 h-8 rounded border border-input"
-                                  />
-                                  <span className="text-sm text-muted-foreground">
-                                    Wähle eine Farbe für den Embed
-                                  </span>
-                                </div>
-                              </div>
-
-                              <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="useCustomEmojis" className="text-right">
-                                  Emojis
-                                </Label>
-                                <div className="flex items-center space-x-2 col-span-3">
-                                  <Switch 
-                                    id="useCustomEmojis"
-                                    checked={customEmbedConfig.useCustomEmojis}
-                                    onCheckedChange={(checked) => setCustomEmbedConfig({
-                                      ...customEmbedConfig,
-                                      useCustomEmojis: checked
-                                    })}
-                                  />
-                                  <Label htmlFor="useCustomEmojis">
-                                    Benutzerdefinierte Emojis verwenden
-                                  </Label>
-                                </div>
-                              </div>
-
-                              <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="showTimestamp" className="text-right">
-                                  Zeitstempel
-                                </Label>
-                                <div className="flex items-center space-x-2 col-span-3">
-                                  <Switch 
-                                    id="showTimestamp"
-                                    checked={customEmbedConfig.showTimestamp}
-                                    onCheckedChange={(checked) => setCustomEmbedConfig({
-                                      ...customEmbedConfig,
-                                      showTimestamp: checked
-                                    })}
-                                  />
-                                  <Label htmlFor="showTimestamp">
-                                    Zeitstempel anzeigen
-                                  </Label>
-                                </div>
-                              </div>
-
-                              <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="footerText" className="text-right">
-                                  Footer
-                                </Label>
-                                <Input
-                                  id="footerText"
-                                  value={customEmbedConfig.footerText}
-                                  onChange={(e) => setCustomEmbedConfig({
-                                    ...customEmbedConfig,
-                                    footerText: e.target.value
-                                  })}
-                                  className="col-span-3"
-                                />
-                              </div>
-
-                              <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="groupServices" className="text-right">
-                                  Gruppierung
-                                </Label>
-                                <div className="flex items-center space-x-2 col-span-3">
-                                  <Switch 
-                                    id="groupServices"
-                                    checked={customEmbedConfig.groupServices}
-                                    onCheckedChange={(checked) => setCustomEmbedConfig({
-                                      ...customEmbedConfig,
-                                      groupServices: checked
-                                    })}
-                                  />
-                                  <Label htmlFor="groupServices">
-                                    Services nach Gruppen anordnen
-                                  </Label>
-                                </div>
-                              </div>
-                            </div>
-                            <DialogFooter className="mt-4">
-                              <Button onClick={saveEmbedSettings}>Einstellungen speichern</Button>
-                            </DialogFooter>
-                          </TabsContent>
-
-                          <TabsContent value="notifications">
-                            <div className="space-y-4 py-2">
-                              <div className="flex items-center justify-between">
-                                <div className="flex flex-col">
-                                  <Label htmlFor="outages" className="mb-1">
-                                    Ausfälle
-                                  </Label>
-                                  <span className="text-xs text-muted-foreground">
-                                    Bei Systemausfällen benachrichtigen
-                                  </span>
-                                </div>
-                                <Switch 
-                                  id="outages"
-                                  checked={notifications.outages}
-                                  onCheckedChange={(checked) => setNotifications({
-                                    ...notifications,
-                                    outages: checked
-                                  })}
-                                />
-                              </div>
-
-                              <Separator />
-
-                              <div className="flex items-center justify-between">
-                                <div className="flex flex-col">
-                                  <Label htmlFor="degraded" className="mb-1">
-                                    Beeinträchtigungen
-                                  </Label>
-                                  <span className="text-xs text-muted-foreground">
-                                    Bei Systembeeinträchtigungen benachrichtigen
-                                  </span>
-                                </div>
-                                <Switch 
-                                  id="degraded"
-                                  checked={notifications.degraded}
-                                  onCheckedChange={(checked) => setNotifications({
-                                    ...notifications,
-                                    degraded: checked
-                                  })}
-                                />
-                              </div>
-
-                              <Separator />
-
-                              <div className="flex items-center justify-between">
-                                <div className="flex flex-col">
-                                  <Label htmlFor="maintenance" className="mb-1">
-                                    Wartungen
-                                  </Label>
-                                  <span className="text-xs text-muted-foreground">
-                                    Bei geplanten Wartungen benachrichtigen
-                                  </span>
-                                </div>
-                                <Switch 
-                                  id="maintenance"
-                                  checked={notifications.maintenance}
-                                  onCheckedChange={(checked) => setNotifications({
-                                    ...notifications,
-                                    maintenance: checked
-                                  })}
-                                />
-                              </div>
-
-                              <Separator />
-
-                              <div className="flex items-center justify-between">
-                                <div className="flex flex-col">
-                                  <Label htmlFor="recovered" className="mb-1">
-                                    Wiederherstellungen
-                                  </Label>
-                                  <span className="text-xs text-muted-foreground">
-                                    Bei Systemwiederherstellungen benachrichtigen
-                                  </span>
-                                </div>
-                                <Switch 
-                                  id="recovered"
-                                  checked={notifications.recovered}
-                                  onCheckedChange={(checked) => setNotifications({
-                                    ...notifications,
-                                    recovered: checked
-                                  })}
-                                />
-                              </div>
-                            </div>
-                            <DialogFooter className="mt-4">
-                              <Button onClick={saveNotificationSettings}>Einstellungen speichern</Button>
-                            </DialogFooter>
-                          </TabsContent>
-
-                          <TabsContent value="advanced">
-                            <div className="space-y-4 py-2">
-                              <div className="bg-muted/50 p-3 rounded-md">
-                                <h4 className="font-medium mb-2 flex items-center">
-                                  <Info className="h-4 w-4 mr-1" /> 
-                                  Erweiterte Funktionen
-                                </h4>
-                                <p className="text-sm text-muted-foreground">
-                                  Diese Funktionen sollten mit Vorsicht verwendet werden.
-                                </p>
-                              </div>
-
-                              <div className="flex flex-col gap-2 mt-4">
-                                <Button 
-                                  variant="outline" 
-                                  className="justify-start"
-                                  onClick={clearHistoricalMessages}
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4 text-destructive" />
-                                  Historische Nachrichten löschen
-                                </Button>
-                                
-                                <Button 
-                                  variant="outline" 
-                                  className="justify-start"
-                                  onClick={() => setShowLogs(!showLogs)}
-                                >
-                                  {showLogs ? (
-                                    <EyeOff className="mr-2 h-4 w-4" />
-                                  ) : (
-                                    <Eye className="mr-2 h-4 w-4" />
-                                  )}
-                                  {showLogs ? "Logs ausblenden" : "Logs anzeigen"}
-                                </Button>
-                                
-                                <Button 
-                                  variant="outline" 
-                                  className="justify-start"
-                                  onClick={() => {
-                                    window.open(`https://discord.com/channels/${botInfo?.guild_id || ''}/${botConfig?.status_channel_id || ''}`, '_blank');
-                                  }}
-                                >
-                                  <Link className="mr-2 h-4 w-4" />
-                                  Discord-Kanal öffnen
-                                </Button>
-                              </div>
-                            </div>
-                          </TabsContent>
-                        </Tabs>
-                      </DialogContent>
-                    </Dialog>
-
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="w-1/2 flex items-center justify-center"
-                        >
-                          <History className="mr-2 h-4 w-4" />
-                          Verlauf
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Bot Status Verlauf</DialogTitle>
-                          <DialogDescription>
-                            Statusänderungen und Aktivitäten des Bots
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="py-4">
-                          <h4 className="font-medium mb-2">Status History</h4>
-                          <div className="bg-muted/50 rounded-md p-3 max-h-[200px] overflow-y-auto">
-                            {botStatusHistory.length > 0 ? (
-                              <div className="space-y-2">
-                                {botStatusHistory.map((entry, i) => (
-                                  <div key={i} className="text-sm flex justify-between">
-                                    <span className="text-muted-foreground">
-                                      {entry.timestamp.toLocaleTimeString('de-DE')}
-                                    </span>
-                                    <Badge variant={entry.status === 'online' ? 'default' : 'destructive'} className="text-xs">
-                                      {entry.status === 'online' ? 'Online' : 'Offline'}
-                                    </Badge>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="text-sm text-muted-foreground text-center">
-                                Keine Historiedaten verfügbar
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
-                </>
-              )}
-            </TooltipProvider>
-          </div>
-
-          {showLogs && (
-            <div className="mt-4 border-t border-[#5865F2]/10 pt-4">
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="text-sm font-medium">Bot-Logs</h4>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-6 px-2" 
-                  onClick={() => setBotLogs([])}
-                >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
-              </div>
-              <div className="bg-muted/50 rounded-md p-2 max-h-[150px] overflow-y-auto text-left">
-                {botLogs.length > 0 ? (
-                  botLogs.map((log, i) => (
-                    <div key={i} className="text-xs text-muted-foreground mb-1">{log}</div>
-                  ))
-                ) : (
-                  <p className="text-xs text-muted-foreground text-center py-2">Keine Logs vorhanden</p>
-                )}
-              </div>
-            </div>
-          )}
-
-          <div className="pt-2 text-xs text-center text-muted-foreground">
-            {!isAdmin 
-              ? "Nur Administratoren können Updates senden"
-              : isOnline 
-                ? "Discord-Bot ist online und bereit"
-                : botEnabled 
-                  ? "Discord-Bot ist offline oder nicht erreichbar"
-                  : "Discord-Benachrichtigungen sind deaktiviert"}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
