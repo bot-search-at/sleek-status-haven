@@ -36,7 +36,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export function NavBar() {
   const location = useLocation();
-  const { user, signOut } = useAuth();
+  const { user, signOut, isAdmin } = useAuth();
   
   const isActive = (path: string) => location.pathname === path;
   
@@ -129,7 +129,7 @@ export function NavBar() {
                         <span>Einstellungen</span>
                       </DropdownMenuItem>
                     </Link>
-                    {user.isAdmin && (
+                    {isAdmin && (
                       <Link to="/admin">
                         <DropdownMenuItem className="cursor-pointer flex items-center gap-2">
                           <Shield className="h-4 w-4" />
@@ -151,7 +151,7 @@ export function NavBar() {
               
               <div className="hidden md:flex gap-2">
                 <Link to="/admin">
-                  {user.isAdmin && (
+                  {isAdmin && (
                     <Button variant="outline" size="sm" className="neo-button rounded-full">
                       <Shield className="h-4 w-4 mr-1" /> Admin
                     </Button>
@@ -190,7 +190,7 @@ export function NavBar() {
                     <div>
                       <p className="text-sm font-medium">{user.email}</p>
                       <p className="text-xs text-muted-foreground">
-                        {user.isAdmin ? 'Administrator' : 'Benutzer'}
+                        {isAdmin ? 'Administrator' : 'Benutzer'}
                       </p>
                     </div>
                   </div>
@@ -236,7 +236,7 @@ export function NavBar() {
                       <SettingsIcon className="h-4 w-4" />
                       <span>Einstellungen</span>
                     </Link>
-                    {user.isAdmin && (
+                    {isAdmin && (
                       <Link
                         to="/admin"
                         className={cn(
