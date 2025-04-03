@@ -10,7 +10,7 @@ interface PageLayoutProps {
 
 export function PageLayout({ children, className }: PageLayoutProps) {
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col bg-background">
       <NavBar />
       <main className={cn("flex-1 container px-4 sm:px-8 py-8", className)}>
         <div className="page-transition">{children}</div>
