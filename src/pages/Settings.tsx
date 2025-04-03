@@ -69,16 +69,16 @@ export default function Settings() {
             });
             
             toast({
-              title: "Profile data not found",
-              description: "Your profile information couldn't be loaded",
+              title: "Profildaten nicht gefunden",
+              description: "Deine Profilinformationen konnten nicht geladen werden",
               variant: "warning"
             });
           }
         } catch (error) {
           console.error("Error loading profile data:", error);
           toast({
-            title: "Error",
-            description: "Could not load profile data",
+            title: "Fehler",
+            description: "Profildaten konnten nicht geladen werden",
             variant: "destructive"
           });
         }
@@ -112,15 +112,15 @@ export default function Settings() {
       }
       
       toast({
-        title: "Settings saved",
-        description: "Your settings have been successfully updated.",
+        title: "Einstellungen gespeichert",
+        description: "Deine Einstellungen wurden erfolgreich aktualisiert.",
         variant: "success"
       });
     } catch (error: any) {
       console.error("Error saving settings:", error);
       toast({
-        title: "Error saving",
-        description: error.message || "Your settings could not be saved.",
+        title: "Fehler beim Speichern",
+        description: error.message || "Deine Einstellungen konnten nicht gespeichert werden.",
         variant: "destructive"
       });
     } finally {
@@ -133,8 +133,8 @@ export default function Settings() {
     setApiKey(newKey);
     
     toast({
-      title: "New API key generated",
-      description: "Please save this key safely. It will only be shown once.",
+      title: "Neuer API-Schlüssel generiert",
+      description: "Bitte bewahre diesen Schlüssel sicher auf. Er wird nur einmal angezeigt.",
       variant: "info"
     });
   };
@@ -167,16 +167,16 @@ export default function Settings() {
       <div className="max-w-5xl mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Einstellungen</h1>
             <p className="text-muted-foreground mt-1">
-              Manage your account settings and application preferences.
+              Verwalte deine Kontoeinstellungen und Anwendungspräferenzen.
             </p>
           </div>
           
           {isAdmin && (
             <Badge variant="outline" className="mt-2 md:mt-0 bg-primary/10 text-primary border-primary/30 px-3 py-1">
               <Shield className="mr-1 h-3.5 w-3.5" />
-              Admin Access
+              Administrator-Zugang
             </Badge>
           )}
         </div>
@@ -188,7 +188,7 @@ export default function Settings() {
               className="data-[state=active]:border-primary data-[state=active]:border-b-2"
             >
               <User className="mr-2 h-4 w-4" />
-              Account
+              Konto
             </TabsTrigger>
             
             <TabsTrigger 
@@ -196,7 +196,7 @@ export default function Settings() {
               className="data-[state=active]:border-primary data-[state=active]:border-b-2"
             >
               <Bell className="mr-2 h-4 w-4" />
-              Notifications
+              Benachrichtigungen
             </TabsTrigger>
             
             <TabsTrigger 
@@ -204,7 +204,7 @@ export default function Settings() {
               className="data-[state=active]:border-primary data-[state=active]:border-b-2"
             >
               <Cloud className="mr-2 h-4 w-4" />
-              Integrations
+              Integrationen
             </TabsTrigger>
             
             {isAdmin && (
@@ -213,7 +213,7 @@ export default function Settings() {
                 className="data-[state=active]:border-primary data-[state=active]:border-b-2"
               >
                 <UserCog className="mr-2 h-4 w-4" />
-                Admin Panel
+                Admin-Bereich
               </TabsTrigger>
             )}
           </TabsList>
@@ -221,26 +221,26 @@ export default function Settings() {
           <TabsContent value="account" className="space-y-4">
             <Card className="border-border/40 shadow-sm">
               <CardHeader>
-                <CardTitle>Account Settings</CardTitle>
+                <CardTitle>Kontoeinstellungen</CardTitle>
                 <CardDescription>
-                  Manage your account settings and personal information.
+                  Verwalte deine Kontoeinstellungen und persönlichen Informationen.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="username">Username</Label>
+                      <Label htmlFor="username">Benutzername</Label>
                       <Input 
                         id="username" 
                         value={profileData.username}
                         onChange={e => setProfileData({...profileData, username: e.target.value})}
-                        placeholder="your_username" 
+                        placeholder="dein_benutzername" 
                       />
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="email">Email Address</Label>
+                      <Label htmlFor="email">E-Mail-Adresse</Label>
                       <Input 
                         id="email" 
                         type="email" 
@@ -248,33 +248,33 @@ export default function Settings() {
                         disabled
                         className="bg-muted/50"
                       />
-                      <p className="text-xs text-muted-foreground mt-1">Email address cannot be changed.</p>
+                      <p className="text-xs text-muted-foreground mt-1">E-Mail-Adresse kann nicht geändert werden.</p>
                     </div>
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="display-name">Display Name</Label>
+                    <Label htmlFor="display-name">Anzeigename</Label>
                     <Input 
                       id="display-name" 
                       value={profileData.displayName}
                       onChange={e => setProfileData({...profileData, displayName: e.target.value})}
-                      placeholder="Your Display Name" 
+                      placeholder="Dein Anzeigename" 
                     />
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="avatar">Profile Picture URL</Label>
+                    <Label htmlFor="avatar">Profilbild-URL</Label>
                     <Input 
                       id="avatar" 
                       value={profileData.avatar}
                       onChange={e => setProfileData({...profileData, avatar: e.target.value})}
-                      placeholder="https://example.com/image.jpg" 
+                      placeholder="https://beispiel.de/bild.jpg" 
                     />
                   </div>
                 </div>
               </CardContent>
               <CardFooter className="pt-4 flex justify-between border-t px-6 py-4">
-                <Button variant="outline">Reset</Button>
+                <Button variant="outline">Zurücksetzen</Button>
                 <Button 
                   onClick={handleSaveSettings} 
                   disabled={isSaving}
@@ -282,12 +282,12 @@ export default function Settings() {
                   {isSaving ? (
                     <>
                       <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
+                      Speichern...
                     </>
                   ) : (
                     <>
                       <Save className="mr-2 h-4 w-4" />
-                      Save
+                      Speichern
                     </>
                   )}
                 </Button>
@@ -296,17 +296,17 @@ export default function Settings() {
             
             <Card className="border-border/40 shadow-sm">
               <CardHeader>
-                <CardTitle>Appearance</CardTitle>
+                <CardTitle>Erscheinungsbild</CardTitle>
                 <CardDescription>
-                  Customize the application's appearance to suit your needs.
+                  Passe das Erscheinungsbild der Anwendung nach deinen Wünschen an.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label htmlFor="dark-mode">Dark Mode</Label>
+                    <Label htmlFor="dark-mode">Dunkelmodus</Label>
                     <p className="text-sm text-muted-foreground">
-                      Enable dark mode for an eye-friendly experience.
+                      Aktiviere den Dunkelmodus für ein augenfreundliches Erlebnis.
                     </p>
                   </div>
                   <Switch
@@ -320,19 +320,19 @@ export default function Settings() {
             
             <Card className="border-border/40 shadow-sm">
               <CardHeader>
-                <CardTitle>API Access</CardTitle>
+                <CardTitle>API-Zugriff</CardTitle>
                 <CardDescription>
-                  Manage your API access and keys.
+                  Verwalte deinen API-Zugang und Schlüssel.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="api-key">API Key</Label>
+                  <Label htmlFor="api-key">API-Schlüssel</Label>
                   <div className="flex space-x-2">
                     <Input 
                       id="api-key" 
                       value={apiKey} 
-                      placeholder="No API key generated" 
+                      placeholder="Kein API-Schlüssel generiert" 
                       readOnly
                       className="font-mono"
                     />
@@ -341,11 +341,11 @@ export default function Settings() {
                       onClick={generateNewApiKey}
                     >
                       <Key className="mr-2 h-4 w-4" />
-                      Generate
+                      Generieren
                     </Button>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    API keys grant full access to your account. They should be stored securely.
+                    API-Schlüssel gewähren vollen Zugriff auf dein Konto. Sie sollten sicher aufbewahrt werden.
                   </p>
                 </div>
               </CardContent>
@@ -355,18 +355,18 @@ export default function Settings() {
           <TabsContent value="notifications" className="space-y-4">
             <Card className="border-border/40 shadow-sm">
               <CardHeader>
-                <CardTitle>Notification Settings</CardTitle>
+                <CardTitle>Benachrichtigungseinstellungen</CardTitle>
                 <CardDescription>
-                  Configure how you'd like to be notified about status changes.
+                  Konfiguriere, wie du über Statusänderungen informiert werden möchtest.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label htmlFor="email-notifications">Email Notifications</Label>
+                      <Label htmlFor="email-notifications">E-Mail-Benachrichtigungen</Label>
                       <p className="text-sm text-muted-foreground">
-                        Receive notifications about important events via email.
+                        Erhalte Benachrichtigungen über wichtige Ereignisse per E-Mail.
                       </p>
                     </div>
                     <Switch
@@ -380,9 +380,9 @@ export default function Settings() {
                   
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label htmlFor="push-notifications">Push Notifications</Label>
+                      <Label htmlFor="push-notifications">Push-Benachrichtigungen</Label>
                       <p className="text-sm text-muted-foreground">
-                        Receive real-time notifications about status changes in the browser.
+                        Erhalte Echtzeit-Benachrichtigungen über Statusänderungen im Browser.
                       </p>
                     </div>
                     <Switch
@@ -395,15 +395,15 @@ export default function Settings() {
                   <Separator />
                   
                   <div className="space-y-2">
-                    <h3 className="text-sm font-medium">Notification Types</h3>
+                    <h3 className="text-sm font-medium">Benachrichtigungstypen</h3>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="flex items-start space-x-3">
                         <Zap className="h-5 w-5 text-amber-500 mt-0.5" />
                         <div className="space-y-1">
-                          <h4 className="text-sm font-medium">Incidents</h4>
+                          <h4 className="text-sm font-medium">Vorfälle</h4>
                           <p className="text-sm text-muted-foreground">
-                            When a new incident is detected.
+                            Wenn ein neuer Vorfall erkannt wird.
                           </p>
                         </div>
                       </div>
@@ -411,9 +411,9 @@ export default function Settings() {
                       <div className="flex items-start space-x-3">
                         <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
                         <div className="space-y-1">
-                          <h4 className="text-sm font-medium">Resolutions</h4>
+                          <h4 className="text-sm font-medium">Lösungen</h4>
                           <p className="text-sm text-muted-foreground">
-                            When an incident is resolved.
+                            Wenn ein Vorfall behoben wird.
                           </p>
                         </div>
                       </div>
@@ -421,9 +421,9 @@ export default function Settings() {
                       <div className="flex items-start space-x-3">
                         <MessageSquare className="h-5 w-5 text-blue-500 mt-0.5" />
                         <div className="space-y-1">
-                          <h4 className="text-sm font-medium">Updates</h4>
+                          <h4 className="text-sm font-medium">Aktualisierungen</h4>
                           <p className="text-sm text-muted-foreground">
-                            When there is an update to an incident.
+                            Wenn es ein Update zu einem Vorfall gibt.
                           </p>
                         </div>
                       </div>
@@ -431,9 +431,9 @@ export default function Settings() {
                       <div className="flex items-start space-x-3">
                         <ActivitySquare className="h-5 w-5 text-violet-500 mt-0.5" />
                         <div className="space-y-1">
-                          <h4 className="text-sm font-medium">Maintenance</h4>
+                          <h4 className="text-sm font-medium">Wartung</h4>
                           <p className="text-sm text-muted-foreground">
-                            When maintenance is scheduled.
+                            Wenn eine Wartung geplant ist.
                           </p>
                         </div>
                       </div>
@@ -450,12 +450,12 @@ export default function Settings() {
                   {isSaving ? (
                     <>
                       <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
+                      Speichern...
                     </>
                   ) : (
                     <>
                       <Save className="mr-2 h-4 w-4" />
-                      Save
+                      Speichern
                     </>
                   )}
                 </Button>
@@ -475,23 +475,23 @@ export default function Settings() {
                     <CardTitle>
                       <div className="flex items-center">
                         <Shield className="mr-2 h-5 w-5 text-primary" />
-                        Admin Dashboard
+                        Admin-Dashboard
                       </div>
                     </CardTitle>
                     <Badge variant="secondary">
-                      Admin Zone
+                      Admin-Bereich
                     </Badge>
                   </div>
                   <CardDescription>
-                    Administrator tools and system management.
+                    Administratorwerkzeuge und Systemverwaltung.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-6 space-y-6">
                   <Alert>
                     <Shield className="h-4 w-4" />
-                    <AlertTitle>Administrator Area</AlertTitle>
+                    <AlertTitle>Administrator-Bereich</AlertTitle>
                     <AlertDescription>
-                      Here you can manage system settings and perform administrative tasks.
+                      Hier kannst du Systemeinstellungen verwalten und administrative Aufgaben ausführen.
                     </AlertDescription>
                   </Alert>
                   
@@ -501,9 +501,9 @@ export default function Settings() {
                         <div className="flex flex-col items-center text-center space-y-2 w-full">
                           <UserCog className="h-8 w-8 text-primary mb-2" />
                           <div>
-                            <h3 className="font-medium">Admin Area</h3>
+                            <h3 className="font-medium">Administrationsbereich</h3>
                             <p className="text-sm text-muted-foreground">
-                              Access all administrative functions
+                              Zugang zu allen Verwaltungsfunktionen
                             </p>
                           </div>
                         </div>
@@ -515,9 +515,9 @@ export default function Settings() {
                         <div className="flex flex-col items-center text-center space-y-2 w-full">
                           <Globe className="h-8 w-8 text-primary mb-2" />
                           <div>
-                            <h3 className="font-medium">System Status</h3>
+                            <h3 className="font-medium">Systemstatus</h3>
                             <p className="text-sm text-muted-foreground">
-                              Complete system monitoring
+                              Vollständige Systemüberwachung
                             </p>
                           </div>
                         </div>
@@ -529,9 +529,9 @@ export default function Settings() {
                         <div className="flex flex-col items-center text-center space-y-2 w-full">
                           <CogIcon className="h-8 w-8 text-primary mb-2" />
                           <div>
-                            <h3 className="font-medium">API Configuration</h3>
+                            <h3 className="font-medium">API-Konfiguration</h3>
                             <p className="text-sm text-muted-foreground">
-                              Manage API access and webhooks
+                              API-Zugang und Webhooks verwalten
                             </p>
                           </div>
                         </div>
@@ -545,7 +545,7 @@ export default function Settings() {
                           <div>
                             <h3 className="font-medium">Repository</h3>
                             <p className="text-sm text-muted-foreground">
-                              Access code repository
+                              Zugriff auf Code-Repository
                             </p>
                           </div>
                         </div>
@@ -554,9 +554,9 @@ export default function Settings() {
                   </div>
                   
                   <div className="mt-6">
-                    <h3 className="text-lg font-medium">System Activity</h3>
+                    <h3 className="text-lg font-medium">Systemaktivität</h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                      Latest activities in the system
+                      Neueste Aktivitäten im System
                     </p>
                     
                     <div className="space-y-4">
@@ -565,8 +565,8 @@ export default function Settings() {
                           <User className="h-4 w-4 text-primary" />
                         </div>
                         <div>
-                          <p className="text-sm font-medium">New user registered</p>
-                          <p className="text-xs text-muted-foreground">Today, 14:32</p>
+                          <p className="text-sm font-medium">Neuer Benutzer registriert</p>
+                          <p className="text-xs text-muted-foreground">Heute, 14:32</p>
                         </div>
                       </div>
                       
@@ -575,8 +575,8 @@ export default function Settings() {
                           <MessageSquare className="h-4 w-4 text-primary" />
                         </div>
                         <div>
-                          <p className="text-sm font-medium">Discord Bot Status updated</p>
-                          <p className="text-xs text-muted-foreground">Yesterday, 18:05</p>
+                          <p className="text-sm font-medium">Discord Bot Status aktualisiert</p>
+                          <p className="text-xs text-muted-foreground">Gestern, 18:05</p>
                         </div>
                       </div>
                       
@@ -585,7 +585,7 @@ export default function Settings() {
                           <ChevronsUpDown className="h-4 w-4 text-primary" />
                         </div>
                         <div>
-                          <p className="text-sm font-medium">System update completed</p>
+                          <p className="text-sm font-medium">Systemupdate abgeschlossen</p>
                           <p className="text-xs text-muted-foreground">24.03.2025, 09:15</p>
                         </div>
                       </div>
@@ -594,7 +594,7 @@ export default function Settings() {
                     <div className="mt-4">
                       <Button variant="outline" className="w-full" asChild>
                         <Link to="#">
-                          View all activities
+                          Alle Aktivitäten anzeigen
                           <ExternalLink className="ml-2 h-4 w-4" />
                         </Link>
                       </Button>
@@ -603,11 +603,11 @@ export default function Settings() {
                 </CardContent>
                 <CardFooter className="bg-primary/5 px-6 py-4 rounded-b-lg flex justify-between">
                   <Button variant="outline">
-                    Download log
+                    Log herunterladen
                   </Button>
                   <Button>
                     <Shield className="mr-2 h-4 w-4" />
-                    Open Admin Area
+                    Admin-Bereich öffnen
                   </Button>
                 </CardFooter>
               </Card>
