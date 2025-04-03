@@ -24,36 +24,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, currentSession) => {
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-        
-        if (currentSession?.user) {
-          await checkAdminStatus(currentSession.user.id);
-        } else {
-          setIsAdmin(false);
-        }
-      }
-    );
-
-    supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-      
-      if (currentSession?.user) {
-        await checkAdminStatus(currentSession.user.id);
-      }
-      
-      setIsLoading(false);
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
   const checkAdminStatus = async (userId: string) => {
     try {
       const { data, error } = await supabase
@@ -73,6 +43,47 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setIsAdmin(false);
     }
   };
+
+  useEffect(() => {
+    // Set up auth state change listener first
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, currentSession) => {
+        // Only update if there's an actual change to prevent loops
+        if (JSON.stringify(currentSession?.user) !== JSON.stringify(user)) {
+          setSession(currentSession);
+          setUser(currentSession?.user ?? null);
+          
+          if (currentSession?.user) {
+            // Use setTimeout to prevent potential deadlock with Supabase client
+            setTimeout(() => {
+              checkAdminStatus(currentSession.user.id);
+            }, 0);
+          } else {
+            setIsAdmin(false);
+          }
+        }
+      }
+    );
+
+    // Initial session check
+    const initializeAuth = async () => {
+      const { data: { session: initialSession } } = await supabase.auth.getSession();
+      setSession(initialSession);
+      setUser(initialSession?.user ?? null);
+      
+      if (initialSession?.user) {
+        await checkAdminStatus(initialSession.user.id);
+      }
+      
+      setIsLoading(false);
+    };
+    
+    initializeAuth();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const signIn = async (email: string, password: string) => {
     try {
