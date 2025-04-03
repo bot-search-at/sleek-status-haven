@@ -274,7 +274,7 @@ serve(async (req) => {
             body: JSON.stringify({ 
               embeds: [alertEmbed],
               content: currentSystemStatus.status === "outage" 
-                ? "@everyone Ein Systemausfall wurde erkannt!" 
+                ? " Ein Systemausfall wurde erkannt!" 
                 : "Einige Systeme sind beeinträchtigt."
             }),
           });
