@@ -657,7 +657,7 @@ serve(async (req) => {
         color: statusColors[systemStatus] || 0x5865F2,
         fields: embedFields,
         footer: {
-          text: `Letztes Update: ${new Date().toLocaleString('de-DE')} • Weitere Details auf der Statusseite`
+          text: `Letztes Update: ${new Date().toLocaleString('de-DE')} • Power by Bot Search_AT`
         },
         timestamp: new Date().toISOString()
       };
