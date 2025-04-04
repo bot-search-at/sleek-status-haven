@@ -1,4 +1,3 @@
-
 import type { Database as SupabaseDatabase } from "@/integrations/supabase/types";
 
 // Extend the base Supabase database type
@@ -175,21 +174,23 @@ export interface Database extends SupabaseDatabase {
           enabled: boolean | null;
           created_at: string | null;
           updated_at: string | null;
-          design_theme: 'default' | 'minimal' | 'compact' | 'modern'; // Add this field
-          color_scheme: 'standard' | 'dark' | 'light' | 'custom'; // Add this field
-          commands: Array<{name: string, description: string}>; // Add this field
+          design_theme: 'default' | 'minimal' | 'compact' | 'modern'; 
+          color_scheme: 'standard' | 'dark' | 'light' | 'custom'; 
+          commands: Array<{name: string, description: string, is_slash_command?: boolean}>;
+          use_slash_commands: boolean | null;
         };
         Insert: {
-          id: number; // Changed from optional to required to match Supabase types
+          id: number; 
           token: string;
           guild_ids?: string[];
           status_channel_id: string;
           enabled?: boolean | null;
           created_at?: string | null;
           updated_at?: string | null;
-          design_theme?: 'default' | 'minimal' | 'compact' | 'modern'; // Add this field
-          color_scheme?: 'standard' | 'dark' | 'light' | 'custom'; // Add this field
-          commands?: Array<{name: string, description: string}>; // Add this field
+          design_theme?: 'default' | 'minimal' | 'compact' | 'modern';
+          color_scheme?: 'standard' | 'dark' | 'light' | 'custom';
+          commands?: Array<{name: string, description: string, is_slash_command?: boolean}>;
+          use_slash_commands?: boolean | null;
         };
         Update: {
           id?: number;
@@ -199,9 +200,10 @@ export interface Database extends SupabaseDatabase {
           enabled?: boolean | null;
           created_at?: string | null;
           updated_at?: string | null;
-          design_theme?: 'default' | 'minimal' | 'compact' | 'modern'; // Add this field
-          color_scheme?: 'standard' | 'dark' | 'light' | 'custom'; // Add this field
-          commands?: Array<{name: string, description: string}>; // Add this field
+          design_theme?: 'default' | 'minimal' | 'compact' | 'modern';
+          color_scheme?: 'standard' | 'dark' | 'light' | 'custom';
+          commands?: Array<{name: string, description: string, is_slash_command?: boolean}>;
+          use_slash_commands?: boolean | null;
         };
         Relationships: [];
       };

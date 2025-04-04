@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/PageLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,11 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Incident, Service, ServiceStatus, IncidentStatus, IncidentImpact } from "@/lib/types";
-import { PlusCircle, Edit, Trash, AlertTriangle, CheckCircle } from "lucide-react";
+import { PlusCircle, Edit, Trash, AlertTriangle, CheckCircle, Bot } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { DiscordBotAdmin } from "@/components/DiscordBotAdmin";
 import {
   Dialog,
   DialogContent,
@@ -50,28 +50,28 @@ export default function Admin() {
   const [editingIncident, setEditingIncident] = useState<Incident | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{type: 'service' | 'incident', id: string} | null>(null);
+  const [activeTab, setActiveTab] = useState<string>("services");
   
   const { user, isAdmin } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Redirect if not admin
   useEffect(() => {
-    if (!isAdmin && !isLoading) {
-      toast({
-        title: "Access Denied",
-        description: "You don't have permission to access the admin panel.",
-        variant: "destructive",
-      });
-      navigate("/");
+    const hash = window.location.hash.replace('#', '');
+    if (hash && ['services', 'incidents', 'integrations'].includes(hash)) {
+      setActiveTab(hash);
     }
-  }, [isAdmin, isLoading, navigate, toast]);
+  }, []);
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    window.location.hash = value;
+  };
 
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        // Fetch services
         const { data: servicesData, error: servicesError } = await supabase
           .from('services')
           .select('*')
@@ -79,7 +79,6 @@ export default function Admin() {
         
         if (servicesError) throw servicesError;
         
-        // Map the data to match our type
         const mappedServices: Service[] = servicesData.map(service => ({
           id: service.id,
           name: service.name,
@@ -91,7 +90,6 @@ export default function Admin() {
         
         setServices(mappedServices);
         
-        // Fetch incidents
         const { data: incidentsData, error: incidentsError } = await supabase
           .from('incidents')
           .select(`
@@ -102,7 +100,6 @@ export default function Admin() {
         
         if (incidentsError) throw incidentsError;
         
-        // Map the data to match our type
         const mappedIncidents: Incident[] = incidentsData.map(incident => ({
           id: incident.id,
           title: incident.title,
@@ -136,7 +133,6 @@ export default function Admin() {
 
     fetchData();
     
-    // Set up realtime subscription for updates
     const servicesChannel = supabase
       .channel('admin:services')
       .on('postgres_changes', { 
@@ -267,14 +263,12 @@ export default function Admin() {
       
       let error;
       if (editingService) {
-        // Update existing service
         const { error: updateError } = await supabase
           .from('services')
           .update(serviceData)
           .eq('id', editingService.id);
         error = updateError;
       } else {
-        // Create new service
         const { error: insertError } = await supabase
           .from('services')
           .insert([serviceData]);
@@ -315,7 +309,6 @@ export default function Admin() {
       const resolvedAt = newIncidentStatus === 'resolved' ? now : null;
       
       if (editingIncident) {
-        // Update existing incident
         const { error: updateError } = await supabase
           .from('incidents')
           .update({
@@ -330,7 +323,6 @@ export default function Admin() {
           
         if (updateError) throw updateError;
         
-        // Add new incident update
         const { error: updateMsgError } = await supabase
           .from('incident_updates')
           .insert([{
@@ -341,7 +333,6 @@ export default function Admin() {
           
         if (updateMsgError) throw updateMsgError;
       } else {
-        // Create new incident
         const { data: newIncident, error: insertError } = await supabase
           .from('incidents')
           .insert([{
@@ -356,7 +347,6 @@ export default function Admin() {
           
         if (insertError) throw insertError;
         
-        // Add initial incident update
         const { error: updateError } = await supabase
           .from('incident_updates')
           .insert([{
@@ -413,10 +403,14 @@ export default function Admin() {
           </p>
         </div>
 
-        <Tabs defaultValue="services" className="space-y-4">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
           <TabsList>
             <TabsTrigger value="services">Services</TabsTrigger>
             <TabsTrigger value="incidents">Incidents</TabsTrigger>
+            <TabsTrigger value="integrations" className="flex items-center">
+              <Bot className="h-4 w-4 mr-2" />
+              Discord Bot
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="services" className="space-y-4">
@@ -568,9 +562,12 @@ export default function Admin() {
               </CardContent>
             </Card>
           </TabsContent>
+          
+          <TabsContent value="integrations">
+            <DiscordBotAdmin />
+          </TabsContent>
         </Tabs>
 
-        {/* Service Dialog */}
         <Dialog open={isServiceDialogOpen} onOpenChange={setIsServiceDialogOpen}>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
@@ -638,7 +635,6 @@ export default function Admin() {
           </DialogContent>
         </Dialog>
 
-        {/* Incident Dialog */}
         <Dialog open={isIncidentDialogOpen} onOpenChange={setIsIncidentDialogOpen}>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
@@ -741,7 +737,6 @@ export default function Admin() {
           </DialogContent>
         </Dialog>
 
-        {/* Delete Confirmation Dialog */}
         <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <DialogContent className="sm:max-w-[400px]">
             <DialogHeader>
