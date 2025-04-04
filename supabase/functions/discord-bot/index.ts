@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 
@@ -12,6 +13,9 @@ interface BotConfig {
   guild_ids: string[];
   status_channel_id: string;
   enabled: boolean;
+  design_theme?: "default" | "minimal" | "compact" | "modern";
+  color_scheme?: "standard" | "dark" | "light" | "custom";
+  commands?: Array<{name: string, description: string}>;
 }
 
 interface DiscordEmbed {
@@ -35,6 +39,16 @@ interface RequestData {
   channel_id?: string;
   prevStatus?: string;
   currentStatus?: string;
+  command?: string;
+  user_id?: string;
+  message?: {
+    content: string;
+    author: {
+      id: string;
+      username: string;
+    };
+    channel_id: string;
+  };
 }
 
 interface SystemStatus {
@@ -53,6 +67,48 @@ const statusEmojis: Record<string, string> = {
   partial_outage: "<:reed:1356281418682077234>",
   major_outage: "<:reed:1356281418682077234>",
   maintenance: "<:blue:1356281439053807908>"
+};
+
+// Status text translations
+const statusTexts: Record<string, string> = {
+  operational: "Betriebsbereit",
+  degraded: "Beeinträchtigt",
+  partial_outage: "Teilausfall",
+  major_outage: "Schwerer Ausfall",
+  maintenance: "Wartung",
+  unknown: "Unbekannt"
+};
+
+// Status colors for embeds by theme and color scheme
+const statusColors: Record<string, Record<string, number>> = {
+  standard: {
+    operational: 0x57F287, // Green
+    degraded: 0xFEE75C,    // Yellow
+    partial_outage: 0xFEE75C, // Yellow
+    major_outage: 0xED4245, // Red
+    maintenance: 0x5865F2   // Blue/Purple
+  },
+  dark: {
+    operational: 0x2E8B57, // Dark green
+    degraded: 0xDAA520,    // Goldenrod
+    partial_outage: 0xDAA520, // Goldenrod
+    major_outage: 0xA52A2A, // Brown
+    maintenance: 0x483D8B   // DarkSlateBlue
+  },
+  light: {
+    operational: 0x90EE90, // LightGreen
+    degraded: 0xFFDAB9,    // PeachPuff
+    partial_outage: 0xFFDAB9, // PeachPuff
+    major_outage: 0xFFC0CB, // Pink
+    maintenance: 0xADD8E6   // LightBlue
+  },
+  custom: {
+    operational: 0x00FFAA, // Custom mint
+    degraded: 0xFFCC00,    // Custom amber
+    partial_outage: 0xFFCC00, // Custom amber
+    major_outage: 0xFF3366, // Custom rose
+    maintenance: 0x6666FF   // Custom lavender
+  }
 };
 
 serve(async (req) => {
@@ -125,7 +181,7 @@ serve(async (req) => {
 
     const botConfig = configData as BotConfig;
     
-    if (!botConfig.enabled && action !== 'check-status') {
+    if (!botConfig.enabled && action !== 'check-status' && action !== 'handle-command') {
       console.log('Bot is disabled, not sending status update');
       return new Response(
         JSON.stringify({ message: 'Bot ist deaktiviert' }),
@@ -140,6 +196,168 @@ serve(async (req) => {
       });
       return new Response(
         JSON.stringify({ error: 'Unvollständige Bot-Konfiguration' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+
+    // New action to handle incoming Discord commands
+    if (action === 'handle-command') {
+      // Check if we have a message and a command
+      if (!requestData.message?.content) {
+        return new Response(
+          JSON.stringify({ error: 'Keine Nachricht oder kein Befehl angegeben' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+      
+      const message = requestData.message;
+      const content = message.content.trim();
+      
+      // Check if this is a command (starts with !)
+      if (!content.startsWith('!')) {
+        return new Response(
+          JSON.stringify({ message: 'Keine Befehlsanfrage' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        );
+      }
+      
+      // Extract command name (remove ! and get the first word)
+      const commandName = content.slice(1).split(' ')[0].toLowerCase();
+      
+      console.log(`Processing command: ${commandName} from user ${message.author.username}`);
+      
+      // Get the command list from bot config
+      const commands = botConfig.commands || [
+        { name: "status", description: "Zeigt den aktuellen Systemstatus an" },
+        { name: "hilfe", description: "Zeigt verfügbare Befehle an" }
+      ];
+      
+      // Handle status command
+      if (commandName === 'status') {
+        // Get current system status and send a response
+        try {
+          const statusEmbed = await generateStatusEmbed(supabaseClient, botConfig);
+          
+          // Reply to the command in the same channel
+          const response = await fetch(`https://discord.com/api/v10/channels/${message.channel_id}/messages`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bot ${botConfig.token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              content: `<@${message.author.id}>, hier ist der aktuelle Systemstatus:`,
+              embeds: [statusEmbed]
+            })
+          });
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Error sending command response:', errorText);
+            throw new Error(`Discord API error: ${response.status}`);
+          }
+          
+          return new Response(
+            JSON.stringify({ success: true, message: 'Status-Befehl verarbeitet' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+          );
+        } catch (error) {
+          console.error('Error processing status command:', error);
+          return new Response(
+            JSON.stringify({ error: 'Fehler bei der Verarbeitung des Status-Befehls', details: error.message }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+          );
+        }
+      }
+      
+      // Handle help command
+      else if (commandName === 'hilfe' || commandName === 'help') {
+        try {
+          // Create help embed with available commands
+          const helpEmbed: DiscordEmbed = {
+            title: "Verfügbare Befehle",
+            description: "Du kannst folgende Befehle verwenden:",
+            color: 0x5865F2, // Discord blurple
+            fields: commands.map(cmd => ({
+              name: `!${cmd.name}`,
+              value: cmd.description,
+              inline: false
+            })),
+            footer: {
+              text: "Bot Search_AT • Status Bot"
+            }
+          };
+          
+          // Send help message
+          const response = await fetch(`https://discord.com/api/v10/channels/${message.channel_id}/messages`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bot ${botConfig.token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              content: `<@${message.author.id}>, hier sind die verfügbaren Befehle:`,
+              embeds: [helpEmbed]
+            })
+          });
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Error sending help response:', errorText);
+            throw new Error(`Discord API error: ${response.status}`);
+          }
+          
+          return new Response(
+            JSON.stringify({ success: true, message: 'Hilfe-Befehl verarbeitet' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+          );
+        } catch (error) {
+          console.error('Error processing help command:', error);
+          return new Response(
+            JSON.stringify({ error: 'Fehler bei der Verarbeitung des Hilfe-Befehls', details: error.message }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+          );
+        }
+      }
+      
+      // Handle any custom commands
+      const customCommand = commands.find(cmd => cmd.name.toLowerCase() === commandName);
+      if (customCommand) {
+        try {
+          // Send a generic response for custom commands
+          const response = await fetch(`https://discord.com/api/v10/channels/${message.channel_id}/messages`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bot ${botConfig.token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              content: `<@${message.author.id}>, du hast den Befehl \`!${customCommand.name}\` ausgeführt: ${customCommand.description}`
+            })
+          });
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Error sending custom command response:', errorText);
+            throw new Error(`Discord API error: ${response.status}`);
+          }
+          
+          return new Response(
+            JSON.stringify({ success: true, message: `Befehl ${customCommand.name} verarbeitet` }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+          );
+        } catch (error) {
+          console.error(`Error processing ${customCommand.name} command:`, error);
+          return new Response(
+            JSON.stringify({ error: `Fehler bei der Verarbeitung des ${customCommand.name}-Befehls`, details: error.message }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+          );
+        }
+      }
+      
+      // Command not recognized
+      return new Response(
+        JSON.stringify({ error: 'Unbekannter Befehl', command: commandName }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );
     }
@@ -577,10 +795,8 @@ serve(async (req) => {
       }
     }
 
-    // Helper function to perform status update
-    async function performStatusUpdate(supabaseClient: any, botConfig: BotConfig) {
-      console.log('Performing status update...');
-      
+    // Helper function to generate status embed based on current design options
+    async function generateStatusEmbed(supabaseClient: any, botConfig: BotConfig): Promise<DiscordEmbed> {
       // Fetch all services
       const { data: services, error: servicesError } = await supabaseClient
         .from('services')
@@ -598,24 +814,10 @@ serve(async (req) => {
         systemStatus = "degraded";
       }
 
-      // Status colors for embeds
-      const statusColors: Record<string, number> = {
-        operational: 0x57F287, // Green
-        degraded: 0xFEE75C,    // Yellow
-        partial_outage: 0xFEE75C, // Yellow
-        major_outage: 0xED4245, // Red
-        maintenance: 0x5865F2   // Blue/Purple
-      };
-
-      // Status emojis for text
-      const statusEmojis: Record<string, string> = {
-        operational: "<:green:1356281396007670025>",
-        degraded: "<:reed:1356281418682077234>",
-        partial_outage: "<:reed:1356281418682077234>",
-        major_outage: "<:reed:1356281418682077234>",
-        maintenance: "<:blue:1356281439053807908>"
-      };
-
+      // Get the appropriate color scheme
+      const colorScheme = botConfig.color_scheme || "standard";
+      const designTheme = botConfig.design_theme || "default";
+      
       // Group services by their group
       const serviceGroups: Record<string, any[]> = {};
       services.forEach((service: any) => {
@@ -625,20 +827,46 @@ serve(async (req) => {
         serviceGroups[service.service_group].push(service);
       });
 
-      // Create embed fields for each service group
+      // Create embed fields for each service group based on the design theme
       const embedFields = [];
       
       Object.entries(serviceGroups).forEach(([group, groupServices]) => {
         let fieldValue = '';
-        groupServices.forEach((service: any) => {
-          const emoji = statusEmojis[service.status] || "❓";
-          const statusText = service.status === "operational" ? "Betriebsbereit" : 
-                           service.status === "degraded" ? "Beeinträchtigt" : 
-                           service.status === "partial_outage" ? "Teilausfall" : 
-                           service.status === "major_outage" ? "Schwerer Ausfall" : 
-                           service.status === "maintenance" ? "Wartung" : "Unbekannt";
-          fieldValue += `${emoji} **${service.name}**: ${statusText}\n`;
-        });
+        
+        // Different formatting based on design theme
+        if (designTheme === "minimal") {
+          groupServices.forEach((service: any) => {
+            const emoji = statusEmojis[service.status] || "❓";
+            const statusText = statusTexts[service.status] || statusTexts.unknown;
+            fieldValue += `${emoji.replace("<:", "· ").replace(":1356281396007670025>", "")} **${service.name}**: ${statusText}\n`;
+          });
+        } else if (designTheme === "compact") {
+          groupServices.forEach((service: any) => {
+            const emoji = service.status === "operational" ? "✅" : 
+                        service.status === "degraded" ? "⚠️" : 
+                        service.status === "partial_outage" ? "⚠️" : 
+                        service.status === "major_outage" ? "❌" : 
+                        service.status === "maintenance" ? "🔧" : "❓";
+            fieldValue += `${emoji} **${service.name}**\n`;
+          });
+        } else if (designTheme === "modern") {
+          groupServices.forEach((service: any) => {
+            const statusText = statusTexts[service.status] || statusTexts.unknown;
+            const statusColor = service.status === "operational" ? "🟢" : 
+                              service.status === "degraded" ? "🟡" : 
+                              service.status === "partial_outage" ? "🟠" : 
+                              service.status === "major_outage" ? "🔴" : 
+                              service.status === "maintenance" ? "🔵" : "⚪";
+            fieldValue += `${statusColor} **${service.name}** » ${statusText}\n`;
+          });
+        } else {
+          // Default theme
+          groupServices.forEach((service: any) => {
+            const emoji = statusEmojis[service.status] || "❓";
+            const statusText = statusTexts[service.status] || statusTexts.unknown;
+            fieldValue += `${emoji} **${service.name}**: ${statusText}\n`;
+          });
+        }
 
         embedFields.push({
           name: group,
@@ -647,14 +875,15 @@ serve(async (req) => {
         });
       });
 
-      // Create main embed
+      // Create status titles in German
       const statusTitle = systemStatus === "operational" ? "Alle Systeme betriebsbereit" : 
-               systemStatus === "degraded" ? "Einige Systeme beeinträchtigt" : "Systemausfall erkannt";
+                systemStatus === "degraded" ? "Einige Systeme beeinträchtigt" : "Systemausfall erkannt";
 
+      // Create main embed
       const mainEmbed: DiscordEmbed = {
         title: statusTitle,
         description: "Aktuelle Status-Informationen zu allen Diensten",
-        color: statusColors[systemStatus] || 0x5865F2,
+        color: statusColors[colorScheme]?.[systemStatus] || statusColors.standard[systemStatus],
         fields: embedFields,
         footer: {
           text: `Letztes Update: ${new Date().toLocaleString('de-DE')} • Power by Bot Search_AT`
@@ -662,6 +891,15 @@ serve(async (req) => {
         timestamp: new Date().toISOString()
       };
 
+      return mainEmbed;
+    }
+
+    // Helper function to perform status update
+    async function performStatusUpdate(supabaseClient: any, botConfig: BotConfig) {
+      console.log('Performing status update...');
+      
+      // Generate the status embed
+      const mainEmbed = await generateStatusEmbed(supabaseClient, botConfig);
       const embeds = [mainEmbed];
       
       // Check if we have an existing message to update
