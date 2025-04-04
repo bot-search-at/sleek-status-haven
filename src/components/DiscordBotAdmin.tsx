@@ -1,145 +1,110 @@
 
 import { useState, useEffect } from "react";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
-import { supabase } from "@/integrations/supabase/client";
-import { AlertCircle, CheckCircle, RefreshCw, RotateCw, PlusCircle, Trash2, Palette } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, RefreshCw, Save, Trash, Plus, Pencil } from "lucide-react";
+import { DiscordBotStatus } from "./DiscordBotStatus";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
-const formSchema = z.object({
-  token: z.string().min(1, { message: "Bot Token wird benötigt" }),
-  guild_ids: z.string(),
-  status_channel_id: z.string().min(1, { message: "Status Kanal ID wird benötigt" }),
-  enabled: z.boolean().default(false),
-  design_theme: z.enum(["default", "minimal", "compact", "modern"]).default("default"),
-  color_scheme: z.enum(["standard", "dark", "light", "custom"]).default("standard"),
-  use_slash_commands: z.boolean().default(true),
-});
+interface Command {
+  name: string;
+  description: string;
+  is_slash_command?: boolean;
+}
+
+interface DiscordBotConfig {
+  id: number;
+  token: string;
+  guild_ids: string[];
+  status_channel_id: string;
+  enabled: boolean | null;
+  created_at: string | null;
+  updated_at: string | null;
+  design_theme: 'default' | 'minimal' | 'compact' | 'modern';
+  color_scheme: 'standard' | 'dark' | 'light' | 'custom';
+  commands: Command[];
+  use_slash_commands: boolean | null;
+}
 
 export function DiscordBotAdmin() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [isTesting, setIsTesting] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [isRestarting, setIsRestarting] = useState(false);
-  const [botStatus, setBotStatus] = useState<{ success: boolean; message: string; botInfo?: any } | null>(null);
-  const [commands, setCommands] = useState<Array<{name: string, description: string, is_slash_command?: boolean}>>([
-    { name: "status", description: "Zeigt den aktuellen Systemstatus an", is_slash_command: true },
-    { name: "hilfe", description: "Zeigt verfügbare Befehle an", is_slash_command: true }
-  ]);
-  const [newCommand, setNewCommand] = useState({ name: "", description: "", is_slash_command: true });
-  const { toast } = useToast();
-  const { isAdmin } = useAuth();
+  const [botConfig, setBotConfig] = useState<DiscordBotConfig | null>(null);
+  const [token, setToken] = useState("");
+  const [guildIds, setGuildIds] = useState("");
+  const [statusChannelId, setStatusChannelId] = useState("");
+  const [enabled, setEnabled] = useState(false);
+  const [designTheme, setDesignTheme] = useState<'default' | 'minimal' | 'compact' | 'modern'>('default');
+  const [colorScheme, setColorScheme] = useState<'standard' | 'dark' | 'light' | 'custom'>('standard');
+  const [useSlashCommands, setUseSlashCommands] = useState(true);
+  const [commands, setCommands] = useState<Command[]>([]);
+  const [isCommandDialogOpen, setIsCommandDialogOpen] = useState(false);
+  const [editingCommand, setEditingCommand] = useState<Command | null>(null);
+  const [commandName, setCommandName] = useState("");
+  const [commandDescription, setCommandDescription] = useState("");
+  const [commandIsSlash, setCommandIsSlash] = useState(true);
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      token: "",
-      guild_ids: "",
-      status_channel_id: "",
-      enabled: false,
-      design_theme: "default",
-      color_scheme: "standard",
-      use_slash_commands: true,
-    },
-  });
+  const { toast } = useToast();
 
   useEffect(() => {
-    const loadBotConfig = async () => {
-      setIsLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('discord_bot_config')
-          .select('*')
-          .limit(1)
-          .single();
+    fetchBotConfig();
+  }, []);
 
-        if (error) {
-          if (error.code !== 'PGRST116') { // PGRST116 is "no rows returned" error
-            console.error("Error loading bot config:", error);
-            toast({
-              title: "Fehler beim Laden der Bot-Konfiguration",
-              description: error.message,
-              variant: "destructive",
-            });
-          }
-        } else if (data) {
-          form.reset({
-            token: data.token || "",
-            guild_ids: Array.isArray(data.guild_ids) ? data.guild_ids.join(", ") : data.guild_ids || "",
-            status_channel_id: data.status_channel_id || "",
-            enabled: data.enabled || false,
-            design_theme: data.design_theme || "default",
-            color_scheme: data.color_scheme || "standard",
-            use_slash_commands: data.use_slash_commands || true,
-          });
-
-          // Load saved commands if they exist
-          if (data.commands && Array.isArray(data.commands)) {
-            setCommands(data.commands);
-          }
-        }
-      } catch (error) {
-        console.error("Error:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (isAdmin) {
-      loadBotConfig();
-    }
-  }, [form, toast, isAdmin]);
-
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    setIsLoading(true);
-
+  const fetchBotConfig = async () => {
     try {
-      // Process guild_ids: convert comma-separated string to array
-      const guildIdsArray = values.guild_ids
-        .split(',')
-        .map(id => id.trim())
-        .filter(id => id.length > 0);
-
-      // We need to provide id=1 as per our database schema requirement
-      const { error } = await supabase
-        .from('discord_bot_config')
-        .upsert({
-          id: 1, // Explicitly set id to 1 as it's required
-          token: values.token,
-          guild_ids: guildIdsArray,
-          status_channel_id: values.status_channel_id,
-          enabled: values.enabled,
-          design_theme: values.design_theme,
-          color_scheme: values.color_scheme,
-          commands: commands,
-          use_slash_commands: values.use_slash_commands,
-          updated_at: new Date().toISOString()
-        });
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from("discord_bot_config")
+        .select("*")
+        .eq("id", 1)
+        .single();
 
       if (error) {
-        throw error;
+        console.error("Error fetching bot config:", error);
+        toast({
+          title: "Error",
+          description: "Could not load Discord bot configuration.",
+          variant: "destructive",
+        });
+        return;
       }
 
+      setBotConfig(data);
+      setToken(data.token);
+      setGuildIds(data.guild_ids ? data.guild_ids.join("\n") : "");
+      setStatusChannelId(data.status_channel_id);
+      setEnabled(data.enabled || false);
+      setDesignTheme(data.design_theme || 'default');
+      setColorScheme(data.color_scheme || 'standard');
+      setUseSlashCommands(data.use_slash_commands || false);
+      setCommands(data.commands || []);
+    } catch (error) {
+      console.error("Error in fetchBotConfig:", error);
       toast({
-        title: "Bot-Konfiguration gespeichert",
-        description: "Die Discord Bot Einstellungen wurden erfolgreich aktualisiert.",
-      });
-    } catch (error: any) {
-      console.error("Error saving bot config:", error);
-      toast({
-        title: "Fehler beim Speichern der Konfiguration",
-        description: error.message || "Ein unerwarteter Fehler ist aufgetreten.",
+        title: "Error",
+        description: "An unexpected error occurred.",
         variant: "destructive",
       });
     } finally {
@@ -147,128 +112,97 @@ export function DiscordBotAdmin() {
     }
   };
 
-  const testConnection = async () => {
-    setIsTesting(true);
-    setBotStatus(null);
+  const handleSave = async () => {
+    if (!token || !statusChannelId) {
+      toast({
+        title: "Missing Fields",
+        description: "Bot token and status channel ID are required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const parsedGuildIds = guildIds
+      .split("\n")
+      .map((id) => id.trim())
+      .filter(Boolean);
+
+    if (useSlashCommands && parsedGuildIds.length === 0) {
+      toast({
+        title: "Missing Guild IDs",
+        description: "At least one guild ID is required when slash commands are enabled.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
-      const values = form.getValues();
-      
-      const response = await supabase.functions.invoke('discord-bot', {
-        method: 'POST',
-        body: {
-          action: 'check-status',
-          token: values.token,
-          guild_id: values.guild_ids.split(',')[0]?.trim(),
-          channel_id: values.status_channel_id
-        },
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      setIsSaving(true);
+
+      const { error } = await supabase
+        .from("discord_bot_config")
+        .update({
+          token,
+          guild_ids: parsedGuildIds,
+          status_channel_id: statusChannelId,
+          enabled,
+          design_theme: designTheme,
+          color_scheme: colorScheme,
+          commands,
+          use_slash_commands: useSlashCommands,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", 1);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Discord bot configuration has been updated.",
       });
 
-      if (response.error) {
-        throw new Error(response.error.message || "Verbindungstest fehlgeschlagen");
-      }
+      fetchBotConfig();
+    } catch (error) {
+      console.error("Error saving bot config:", error);
+      toast({
+        title: "Error",
+        description: "Could not save Discord bot configuration.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
-      if (response.data?.online) {
-        setBotStatus({
-          success: true,
-          message: "Verbindung erfolgreich hergestellt!",
-          botInfo: response.data.bot
-        });
+  const handleRestartBot = async () => {
+    try {
+      setIsRestarting(true);
+      
+      const response = await fetch(`${window.location.origin}/api/discord-bot`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          action: 'restart-bot'
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
         toast({
-          title: "Verbindung erfolgreich",
-          description: `Bot ${response.data.bot.username}#${response.data.bot.discriminator} ist verbunden.`,
+          title: "Bot Restarted",
+          description: "Discord bot has been restarted successfully.",
         });
       } else {
-        setBotStatus({
-          success: false,
-          message: response.data?.error || "Fehler bei der Verbindung"
-        });
-        toast({
-          title: "Verbindungstest fehlgeschlagen",
-          description: response.data?.error,
-          variant: "destructive",
-        });
+        throw new Error(result.error || "Unknown error");
       }
-    } catch (error: any) {
-      console.error("Error testing connection:", error);
-      setBotStatus({
-        success: false,
-        message: error.message || "Ein unerwarteter Fehler ist aufgetreten."
-      });
-      toast({
-        title: "Verbindungstest fehlgeschlagen",
-        description: error.message || "Ein unerwarteter Fehler ist aufgetreten.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsTesting(false);
-    }
-  };
-
-  const sendStatusUpdate = async () => {
-    setIsUpdating(true);
-
-    try {
-      const response = await supabase.functions.invoke('discord-bot', {
-        method: 'POST',
-        body: {
-          action: 'update-status'
-        },
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.error) {
-        throw new Error(response.error.message || "Status-Update fehlgeschlagen");
-      }
-
-      toast({
-        title: "Status-Update gesendet",
-        description: "Das Status-Update wurde erfolgreich an Discord gesendet.",
-      });
-    } catch (error: any) {
-      console.error("Error sending status update:", error);
-      toast({
-        title: "Fehler beim Senden des Status-Updates",
-        description: error.message || "Ein unerwarteter Fehler ist aufgetreten.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  const restartBot = async () => {
-    setIsRestarting(true);
-
-    try {
-      const response = await supabase.functions.invoke('discord-bot', {
-        method: 'POST',
-        body: {
-          action: 'restart-bot'
-        },
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.error) {
-        throw new Error(response.error.message || "Bot-Neustart fehlgeschlagen");
-      }
-
-      toast({
-        title: "Bot-Neustart initiiert",
-        description: "Der Discord Bot wird neu gestartet. Dies kann einen Moment dauern.",
-      });
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error restarting bot:", error);
       toast({
-        title: "Fehler beim Neustarten des Bots",
-        description: error.message || "Ein unerwarteter Fehler ist aufgetreten.",
+        title: "Error",
+        description: `Could not restart Discord bot: ${error.message}`,
         variant: "destructive",
       });
     } finally {
@@ -276,473 +210,349 @@ export function DiscordBotAdmin() {
     }
   };
 
-  const addCommand = () => {
-    if (newCommand.name.trim() && newCommand.description.trim()) {
-      setCommands([...commands, { 
-        name: newCommand.name.trim(), 
-        description: newCommand.description.trim(),
-        is_slash_command: newCommand.is_slash_command
-      }]);
-      setNewCommand({ name: "", description: "", is_slash_command: true });
+  const openAddCommandDialog = () => {
+    setEditingCommand(null);
+    setCommandName("");
+    setCommandDescription("");
+    setCommandIsSlash(true);
+    setIsCommandDialogOpen(true);
+  };
+
+  const openEditCommandDialog = (command: Command, index: number) => {
+    setEditingCommand({ ...command, index });
+    setCommandName(command.name);
+    setCommandDescription(command.description);
+    setCommandIsSlash(command.is_slash_command !== false);
+    setIsCommandDialogOpen(true);
+  };
+
+  const handleSaveCommand = () => {
+    if (!commandName || !commandDescription) {
+      toast({
+        title: "Missing Fields",
+        description: "Command name and description are required.",
+        variant: "destructive",
+      });
+      return;
     }
+
+    const newCommand = {
+      name: commandName.toLowerCase(),
+      description: commandDescription,
+      is_slash_command: commandIsSlash,
+    };
+
+    if (editingCommand) {
+      const newCommands = [...commands];
+      newCommands[editingCommand.index] = newCommand;
+      setCommands(newCommands);
+    } else {
+      setCommands([...commands, newCommand]);
+    }
+
+    setIsCommandDialogOpen(false);
   };
 
-  const removeCommand = (index: number) => {
-    setCommands(commands.filter((_, i) => i !== index));
+  const handleDeleteCommand = (index: number) => {
+    const newCommands = [...commands];
+    newCommands.splice(index, 1);
+    setCommands(newCommands);
   };
 
-  if (!isAdmin) {
+  if (isLoading) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle>Zugriff verweigert</CardTitle>
-          <CardDescription>
-            Du benötigst Administrator-Rechte, um auf diese Seite zuzugreifen.
-          </CardDescription>
-        </CardHeader>
+        <CardContent className="pt-6 text-center">
+          <Loader2 className="h-8 w-8 mx-auto animate-spin text-primary" />
+          <p className="mt-2">Loading configuration...</p>
+        </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Discord Bot Konfiguration</CardTitle>
-        <CardDescription>
-          Konfiguriere den Discord Bot, um Status-Updates automatisch zu senden.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Tabs defaultValue="general" className="w-full">
-          <TabsList className="grid grid-cols-3 mb-6">
-            <TabsTrigger value="general">Allgemein</TabsTrigger>
-            <TabsTrigger value="commands">Befehle</TabsTrigger>
-            <TabsTrigger value="design">Design</TabsTrigger>
-          </TabsList>
-          <TabsContent value="general">
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <FormField
-                  control={form.control}
-                  name="token"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Bot Token</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="password"
-                          placeholder="Discord Bot Token"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Der Token deines Discord Bots. Du kannst einen Bot im {" "}
-                        <a
-                          href="https://discord.com/developers/applications"
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-primary hover:underline"
-                        >
-                          Discord Developer Portal
-                        </a>{" "}
-                        erstellen.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Discord Bot Konfiguration</CardTitle>
+          <CardDescription>
+            Konfigurieren Sie die Verbindung zum Discord Bot und sein Verhalten
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <h3 className="text-lg font-medium">Bot Status</h3>
+            <DiscordBotStatus token={token} channelId={statusChannelId} />
+          </div>
 
-                <FormField
-                  control={form.control}
-                  name="guild_ids"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Server IDs</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Server IDs (kommagetrennt)"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Die IDs der Discord Server, in denen der Bot verwendet werden soll (kommagetrennt).
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-medium">Bot Aktivieren</h3>
+              <Switch
+                checked={enabled}
+                onCheckedChange={setEnabled}
+                aria-label="Toggle bot active state"
+              />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Aktivieren oder deaktivieren Sie den Discord Bot
+            </p>
+          </div>
 
-                <FormField
-                  control={form.control}
-                  name="status_channel_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Status Kanal ID</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Kanal ID für Status-Updates"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Die ID des Kanals, in dem Status-Updates gepostet werden sollen.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+          <div className="space-y-2">
+            <h3 className="text-lg font-medium">Authentifizierung</h3>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="token" className="text-sm font-medium">
+                  Bot Token
+                </label>
+                <Textarea
+                  id="token"
+                  value={token}
+                  onChange={(e) => setToken(e.target.value)}
+                  placeholder="Discord Bot Token"
                 />
-
-                <FormField
-                  control={form.control}
-                  name="enabled"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-base">Bot aktivieren</FormLabel>
-                        <FormDescription>
-                          Aktiviere oder deaktiviere automatische Status-Updates.
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="guild-ids" className="text-sm font-medium">
+                  Server IDs
+                </label>
+                <Textarea
+                  id="guild-ids"
+                  value={guildIds}
+                  onChange={(e) => setGuildIds(e.target.value)}
+                  placeholder="Liste von Server IDs (ein ID pro Zeile)"
+                  rows={3}
                 />
-
-                <FormField
-                  control={form.control}
-                  name="use_slash_commands"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-base">Slash-Commands aktivieren</FormLabel>
-                        <FormDescription>
-                          Befehle als Slash-Commands (/) anstatt mit Präfix (!) verwenden.
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
+                <p className="text-xs text-muted-foreground">
+                  Geben Sie jede Discord Server ID in einer neuen Zeile ein
+                </p>
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="status-channel" className="text-sm font-medium">
+                  Status Kanal ID
+                </label>
+                <Input
+                  id="status-channel"
+                  value={statusChannelId}
+                  onChange={(e) => setStatusChannelId(e.target.value)}
+                  placeholder="Discord Kanal ID für Statusmeldungen"
                 />
+              </div>
+            </div>
+          </div>
 
-                {botStatus && (
-                  <div className={`p-4 rounded-md ${botStatus.success ? 'bg-green-50 text-green-800 dark:bg-green-950 dark:text-green-300' : 'bg-red-50 text-red-800 dark:bg-red-950 dark:text-red-300'}`}>
-                    <div className="flex">
-                      <div className="flex-shrink-0">
-                        {botStatus.success ? (
-                          <CheckCircle className="h-5 w-5 text-green-400" />
-                        ) : (
-                          <AlertCircle className="h-5 w-5 text-red-400" />
-                        )}
-                      </div>
-                      <div className="ml-3">
-                        <h3 className="text-sm font-medium">
-                          {botStatus.success ? 'Verbindung erfolgreich' : 'Verbindungsfehler'}
-                        </h3>
-                        <div className="mt-2 text-sm">
-                          <p>{botStatus.message}</p>
-                          {botStatus.success && botStatus.botInfo && (
-                            <p className="mt-1">Bot: {botStatus.botInfo.username}#{botStatus.botInfo.discriminator}</p>
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium">Design & Befehle</h3>
+            
+            <div className="space-y-2">
+              <label htmlFor="design-theme" className="text-sm font-medium">
+                Design-Stil
+              </label>
+              <Select value={designTheme} onValueChange={(val) => setDesignTheme(val as any)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Wählen Sie einen Design-Stil" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">Standard</SelectItem>
+                  <SelectItem value="minimal">Minimalistisch</SelectItem>
+                  <SelectItem value="compact">Kompakt</SelectItem>
+                  <SelectItem value="modern">Modern</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="color-scheme" className="text-sm font-medium">
+                Farbschema
+              </label>
+              <Select value={colorScheme} onValueChange={(val) => setColorScheme(val as any)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Wählen Sie ein Farbschema" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="standard">Standard</SelectItem>
+                  <SelectItem value="dark">Dunkel</SelectItem>
+                  <SelectItem value="light">Hell</SelectItem>
+                  <SelectItem value="custom">Benutzerdefiniert</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <label htmlFor="use-slash-commands" className="text-sm font-medium">
+                  Slash-Befehle verwenden
+                </label>
+                <Switch
+                  id="use-slash-commands"
+                  checked={useSlashCommands}
+                  onCheckedChange={setUseSlashCommands}
+                  aria-label="Slash-Befehle aktivieren"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Aktivieren Sie diese Option, um Discord Slash-Befehle zu verwenden
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <h4 className="text-sm font-medium">Bot-Befehle</h4>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={openAddCommandDialog}
+                >
+                  <Plus className="h-4 w-4 mr-1" /> Befehl hinzufügen
+                </Button>
+              </div>
+              
+              {commands.length > 0 ? (
+                <div className="space-y-2 mt-2">
+                  {commands.map((command, idx) => (
+                    <div 
+                      key={idx} 
+                      className="flex items-center justify-between p-2 bg-background border rounded-md"
+                    >
+                      <div className="flex flex-col">
+                        <div className="flex items-center space-x-2">
+                          <span className="font-medium">/{command.name}</span>
+                          {command.is_slash_command !== false && useSlashCommands && (
+                            <Badge variant="outline" className="text-xs">Slash</Badge>
                           )}
                         </div>
+                        <span className="text-xs text-muted-foreground">{command.description}</span>
                       </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex flex-col space-y-4">
-                  <Separator />
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-lg font-medium">Bot Aktionen</h3>
-                      <p className="text-sm text-muted-foreground">Teste den Bot oder sende ein Status-Update.</p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={testConnection}
-                        disabled={isTesting || !form.getValues().token || !form.getValues().status_channel_id}
-                      >
-                        {isTesting ? (
-                          <>
-                            <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                            Teste...
-                          </>
-                        ) : (
-                          "Verbindung testen"
-                        )}
-                      </Button>
-                      <Button
-                        type="button"
-                        onClick={sendStatusUpdate}
-                        disabled={isUpdating || !form.getValues().enabled}
-                      >
-                        {isUpdating ? (
-                          <>
-                            <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                            Sende...
-                          </>
-                        ) : (
-                          "Status senden"
-                        )}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        onClick={restartBot}
-                        disabled={isRestarting}
-                      >
-                        {isRestarting ? (
-                          <>
-                            <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                            Starte neu...
-                          </>
-                        ) : (
-                          <>
-                            <RotateCw className="mr-2 h-4 w-4" />
-                            Bot neustarten
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                  <Separator />
-                </div>
-
-                <Button type="submit" disabled={isLoading}>
-                  {isLoading ? (
-                    <>
-                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                      Speichern...
-                    </>
-                  ) : (
-                    "Konfiguration speichern"
-                  )}
-                </Button>
-              </form>
-            </Form>
-          </TabsContent>
-
-          <TabsContent value="commands">
-            <div className="space-y-6">
-              <div className="bg-muted/50 p-4 rounded-md">
-                <h3 className="font-medium mb-2">Verfügbare Befehle</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Diese Befehle können von Benutzern im Discord-Server verwendet werden.
-                </p>
-                
-                <div className="space-y-2 mb-4">
-                  {commands.map((cmd, index) => (
-                    <div key={index} className="flex items-center justify-between bg-background p-3 rounded-md border">
-                      <div>
-                        <p className="font-medium">
-                          {form.getValues().use_slash_commands ? '/' : '!'}{cmd.name}
-                        </p>
-                        <p className="text-sm text-muted-foreground">{cmd.description}</p>
+                      <div className="flex space-x-1">
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => openEditCommandDialog(command, idx)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                          <span className="sr-only">Edit</span>
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => handleDeleteCommand(idx)}
+                        >
+                          <Trash className="h-4 w-4" />
+                          <span className="sr-only">Delete</span>
+                        </Button>
                       </div>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={() => removeCommand(index)}
-                        title="Befehl entfernen"
-                      >
-                        <Trash2 className="h-4 w-4 text-muted-foreground" />
-                      </Button>
                     </div>
                   ))}
                 </div>
-                
-                <div className="flex flex-col gap-4 bg-card p-4 rounded-md border mt-4">
-                  <h4 className="font-medium">Neuen Befehl hinzufügen</h4>
-                  <div className="flex gap-3 items-start">
-                    <div className="flex-1">
-                      <Input 
-                        placeholder="Befehlsname"
-                        value={newCommand.name}
-                        onChange={(e) => setNewCommand({...newCommand, name: e.target.value})}
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">Ohne Präfix, z.B. "status"</p>
-                    </div>
-                    <div className="flex-[2]">
-                      <Input 
-                        placeholder="Beschreibung"
-                        value={newCommand.description}
-                        onChange={(e) => setNewCommand({...newCommand, description: e.target.value})}
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">Kurze Erklärung des Befehls</p>
-                    </div>
-                    <Button 
-                      onClick={addCommand}
-                      disabled={!newCommand.name.trim() || !newCommand.description.trim()}
-                      className="flex-shrink-0"
-                    >
-                      <PlusCircle className="h-4 w-4 mr-2" />
-                      Hinzufügen
-                    </Button>
-                  </div>
-                </div>
-              </div>
-              
-              <Button onClick={form.handleSubmit(onSubmit)} disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                    Speichern...
-                  </>
-                ) : (
-                  "Änderungen speichern"
-                )}
-              </Button>
+              ) : (
+                <p className="text-sm text-muted-foreground">Keine Befehle definiert</p>
+              )}
             </div>
-          </TabsContent>
+          </div>
+        </CardContent>
+        <CardContent className="pt-0 flex justify-end gap-4">
+          <Button
+            variant="outline"
+            onClick={handleRestartBot}
+            disabled={isRestarting || isSaving}
+          >
+            {isRestarting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Neustart läuft...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Bot neu starten
+              </>
+            )}
+          </Button>
           
-          <TabsContent value="design">
-            <div className="space-y-6">
-              <div className="bg-muted/50 p-4 rounded-md">
-                <h3 className="font-medium mb-4 flex items-center gap-2">
-                  <Palette className="h-5 w-5" /> Design-Optionen
-                </h3>
-                
-                <div className="space-y-6">
-                  <FormField
-                    control={form.control}
-                    name="design_theme"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Design-Stil</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                          value={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Wähle einen Design-Stil" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="default">Standard</SelectItem>
-                            <SelectItem value="minimal">Minimalistisch</SelectItem>
-                            <SelectItem value="compact">Kompakt</SelectItem>
-                            <SelectItem value="modern">Modern</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormDescription>
-                          Legt fest, wie die Status-Updates formatiert werden.
-                        </FormDescription>
-                      </FormItem>
-                    )}
-                  />
+          <Button onClick={handleSave} disabled={isSaving}>
+            {isSaving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Speichern...
+              </>
+            ) : (
+              <>
+                <Save className="mr-2 h-4 w-4" />
+                Speichern
+              </>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
 
-                  <FormField
-                    control={form.control}
-                    name="color_scheme"
-                    render={({ field }) => (
-                      <FormItem className="space-y-3">
-                        <FormLabel>Farbschema</FormLabel>
-                        <FormControl>
-                          <RadioGroup
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                            className="flex flex-col space-y-1"
-                            value={field.value}
-                          >
-                            <FormItem className="flex items-center space-x-3 space-y-0">
-                              <FormControl>
-                                <RadioGroupItem value="standard" />
-                              </FormControl>
-                              <FormLabel className="font-normal">
-                                Standard
-                              </FormLabel>
-                            </FormItem>
-                            <FormItem className="flex items-center space-x-3 space-y-0">
-                              <FormControl>
-                                <RadioGroupItem value="dark" />
-                              </FormControl>
-                              <FormLabel className="font-normal">
-                                Dunkel
-                              </FormLabel>
-                            </FormItem>
-                            <FormItem className="flex items-center space-x-3 space-y-0">
-                              <FormControl>
-                                <RadioGroupItem value="light" />
-                              </FormControl>
-                              <FormLabel className="font-normal">
-                                Hell
-                              </FormLabel>
-                            </FormItem>
-                            <FormItem className="flex items-center space-x-3 space-y-0">
-                              <FormControl>
-                                <RadioGroupItem value="custom" />
-                              </FormControl>
-                              <FormLabel className="font-normal">
-                                Benutzerdefiniert
-                              </FormLabel>
-                            </FormItem>
-                          </RadioGroup>
-                        </FormControl>
-                        <FormDescription>
-                          Das Farbschema für Status-Updates und Benachrichtigungen.
-                        </FormDescription>
-                      </FormItem>
-                    )}
-                  />
-                </div>
+      <Dialog open={isCommandDialogOpen} onOpenChange={setIsCommandDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>
+              {editingCommand ? "Befehl bearbeiten" : "Neuen Befehl hinzufügen"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingCommand
+                ? "Ändern Sie die Details des Befehls"
+                : "Fügen Sie einen neuen Befehl für den Bot hinzu"}
+            </DialogDescription>
+          </DialogHeader>
 
-                <div className="mt-8 p-4 bg-background border rounded-md">
-                  <h4 className="text-sm font-medium mb-2">Vorschau</h4>
-                  <div className="p-4 bg-zinc-800 text-white rounded-md font-mono text-xs">
-                    <div className={`p-3 rounded-md ${
-                      form.getValues().design_theme === 'default' ? 'border-l-4 border-green-500' :
-                      form.getValues().design_theme === 'minimal' ? '' :
-                      form.getValues().design_theme === 'compact' ? 'border border-green-500' :
-                      'bg-gradient-to-r from-green-500/20 to-transparent'
-                    }`}>
-                      <div className="font-bold">
-                        {form.getValues().design_theme === 'minimal' ? '· ' : ''}
-                        Alle Systeme betriebsbereit
-                      </div>
-                      <div className="text-gray-300 mt-1">Aktuelle Status-Informationen zu allen Diensten</div>
-                      <div className="mt-3 space-y-2">
-                        <div><span className="text-green-400">●</span> <span className="font-medium">Website:</span> Betriebsbereit</div>
-                        <div><span className="text-green-400">●</span> <span className="font-medium">API:</span> Betriebsbereit</div>
-                        <div><span className="text-blue-400">●</span> <span className="font-medium">Bot:</span> Wartung</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <Button onClick={form.handleSubmit(onSubmit)} disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                    Speichern...
-                  </>
-                ) : (
-                  "Design speichern"
-                )}
-              </Button>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label htmlFor="command-name" className="text-sm font-medium">
+                Befehlsname
+              </label>
+              <Input
+                id="command-name"
+                value={commandName}
+                onChange={(e) => setCommandName(e.target.value)}
+                placeholder="status"
+              />
+              <p className="text-xs text-muted-foreground">
+                Der Name des Befehls ohne Schrägstrich
+              </p>
             </div>
-          </TabsContent>
-        </Tabs>
-      </CardContent>
-      <CardFooter className="text-sm text-muted-foreground">
-        <p>
-          Hinweis: Der Bot muss den Server mit den Berechtigungen "Nachrichten lesen" und "Nachrichten senden" 
-          eingeladen worden sein.
-        </p>
-      </CardFooter>
-    </Card>
+
+            <div className="space-y-2">
+              <label htmlFor="command-description" className="text-sm font-medium">
+                Beschreibung
+              </label>
+              <Textarea
+                id="command-description"
+                value={commandDescription}
+                onChange={(e) => setCommandDescription(e.target.value)}
+                placeholder="Zeigt den aktuellen Systemstatus an"
+                rows={3}
+              />
+            </div>
+
+            {useSlashCommands && (
+              <div className="flex items-center justify-between">
+                <label htmlFor="is-slash-command" className="text-sm font-medium">
+                  Als Slash-Befehl registrieren
+                </label>
+                <Switch
+                  id="is-slash-command"
+                  checked={commandIsSlash}
+                  onCheckedChange={setCommandIsSlash}
+                />
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsCommandDialogOpen(false)}
+            >
+              Abbrechen
+            </Button>
+            <Button onClick={handleSaveCommand}>Speichern</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

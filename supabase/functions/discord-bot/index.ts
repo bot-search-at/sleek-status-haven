@@ -374,7 +374,7 @@ async function registerSlashCommands(token: string, guildId: string, commands: C
     console.log(`Registering ${discordCommands.length} slash commands for guild ${guildId}`);
 
     // Register guild commands (faster than global commands)
-    const url = `https://discord.com/api/v10/applications/1355163870989390005/guilds/${guildId}/commands`;
+    const url = `https://discord.com/api/v10/applications/@me/guilds/${guildId}/commands`;
     
     const response = await fetch(url, {
       method: 'PUT',
@@ -473,7 +473,7 @@ async function performStatusUpdate() {
       incidents_count: incidents.length,
     };
   } catch (error) {
-    console.error(`Error auto-updating embed after system check: ${error}`);
+    console.error(`Error in performStatusUpdate: ${error}`);
     throw error;
   }
 }
