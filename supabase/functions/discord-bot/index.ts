@@ -440,13 +440,16 @@ async function performStatusUpdate() {
     }
     
     // Get active incidents
+    const oneDayAgo = new Date();
+    oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+    
     const { data: incidentsData, error: incidentsError } = await supabaseClient
       .from('incidents')
       .select(`
         *,
         incident_updates(*)
       `)
-      .or('status.neq.resolved,resolved_at.gt.${new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()}');
+      .or(`status.neq.resolved,resolved_at.gt.${oneDayAgo.toISOString()}`);
     
     if (incidentsError) {
       throw new Error(`Error fetching incidents: ${incidentsError.message}`);
