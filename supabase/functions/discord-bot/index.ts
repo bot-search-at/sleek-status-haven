@@ -509,10 +509,36 @@ serve(async (req: Request) => {
       case 'check-status':
         console.log('Checking Discord bot status using token...');
 
+        // Get the token from the request or from the database
+        let token = data.token;
+        let channelId = data.channel_id;
+        
+        if (!token || !channelId) {
+          // If token or channel ID not provided in request, try to get from database
+          const { data: configData, error: configError } = await supabaseClient
+            .from('discord_bot_config')
+            .select('token, status_channel_id')
+            .eq('id', 1)
+            .single();
+            
+          if (configError || !configData) {
+            return new Response(
+              JSON.stringify({
+                online: false,
+                error: 'No bot configuration found'
+              }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          
+          token = token || configData.token;
+          channelId = channelId || configData.status_channel_id;
+        }
+
         // First verify bot token works
         const tokenResponse = await fetch('https://discord.com/api/v10/users/@me', {
           headers: {
-            'Authorization': `Bot ${data.token || ''}`,
+            'Authorization': `Bot ${token || ''}`,
           },
         });
         
@@ -524,8 +550,8 @@ serve(async (req: Request) => {
           
           // Then verify channel access
           const channelAccessible = await checkChannelAccess(
-            data.token || '',
-            data.channel_id || ''
+            token || '',
+            channelId || ''
           );
           
           console.log(`Channel access check result: ${channelAccessible ? 'Accessible' : 'Not accessible'}`);
@@ -628,13 +654,13 @@ serve(async (req: Request) => {
           const botConfig = configData as DiscordBotConfig;
 
           // Register slash commands for all guilds
-          if (botConfig.use_slash_commands && botConfig.guild_ids.length > 0) {
+          if (botConfig.use_slash_commands && botConfig.guild_ids?.length > 0) {
             console.log('Registering slash commands for all guilds...');
             for (const guildId of botConfig.guild_ids) {
               await registerSlashCommands(
                 botConfig.token,
                 guildId,
-                botConfig.commands,
+                botConfig.commands || [],
                 botConfig.use_slash_commands
               );
             }
@@ -655,6 +681,44 @@ serve(async (req: Request) => {
           );
         } catch (error) {
           console.error(`Error restarting bot: ${error}`);
+          return new Response(
+            JSON.stringify({ success: false, error: error.message }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+      case 'send-announcement':
+        console.log('Sending custom announcement to Discord...');
+        
+        try {
+          const { data: configData, error: configError } = await supabaseClient
+            .from('discord_bot_config')
+            .select('token, status_channel_id')
+            .eq('id', 1)
+            .single();
+          
+          if (configError) {
+            throw new Error(`Error fetching bot config: ${configError.message}`);
+          }
+          
+          const embed = {
+            title: data.title,
+            description: data.content,
+            color: data.color || 0x5865F2,
+            timestamp: new Date().toISOString()
+          };
+          
+          await sendStatusUpdate(configData.token, configData.status_channel_id, embed);
+          
+          return new Response(
+            JSON.stringify({ 
+              success: true,
+              message: 'Announcement sent successfully'
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch (error) {
+          console.error(`Error sending announcement: ${error}`);
           return new Response(
             JSON.stringify({ success: false, error: error.message }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

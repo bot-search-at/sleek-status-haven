@@ -21,8 +21,8 @@ import { Link } from "react-router-dom";
 
 interface DiscordBotStatusProps {
   services: Service[];
-  token?: string;
-  channelId?: string;
+  tokenProp?: string;
+  channelIdProp?: string;
 }
 
 // Funktion definieren, bevor sie benutzt wird
@@ -36,7 +36,7 @@ const getSystemStatus = (services: Service[]) => {
   }
 };
 
-export function DiscordBotStatus({ services, token: propToken, channelId: propChannelId }: DiscordBotStatusProps) {
+export function DiscordBotStatus({ services, tokenProp, channelIdProp }: DiscordBotStatusProps) {
   const [botEnabled, setBotEnabled] = useState<boolean>(false);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [responseTime, setResponseTime] = useState<number | null>(null);
@@ -62,7 +62,7 @@ export function DiscordBotStatus({ services, token: propToken, channelId: propCh
   const [cpuUsage, setCpuUsage] = useState<number>(0);
   const { toast } = useToast();
   const { user } = useAuth();
-  const [botToken, setBotToken] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [statusChannelId, setStatusChannelId] = useState<string | null>(null);
 
   const loadBotStatus = async () => {
@@ -152,7 +152,7 @@ export function DiscordBotStatus({ services, token: propToken, channelId: propCh
         console.log("System status check response:", data);
         setLastSystemCheck(new Date());
         
-        if (data.statusChanged) {
+        if (data?.statusChanged) {
           toast({
             title: "Systemstatus hat sich geändert",
             description: `Status ist jetzt: ${
@@ -202,13 +202,13 @@ export function DiscordBotStatus({ services, token: propToken, channelId: propCh
   }, [user]);
 
   useEffect(() => {
-    if (propToken) {
-      setBotToken(propToken);
+    if (tokenProp) {
+      setToken(tokenProp);
     }
-    if (propChannelId) {
-      setStatusChannelId(propChannelId);
+    if (channelIdProp) {
+      setStatusChannelId(channelIdProp);
     }
-  }, [propToken, propChannelId]);
+  }, [tokenProp, channelIdProp]);
 
   useEffect(() => {
     loadBotStatus();
