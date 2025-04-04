@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +21,8 @@ import { Link } from "react-router-dom";
 
 interface DiscordBotStatusProps {
   services: Service[];
+  token?: string;
+  channelId?: string;
 }
 
 // Funktion definieren, bevor sie benutzt wird
@@ -35,7 +36,7 @@ const getSystemStatus = (services: Service[]) => {
   }
 };
 
-export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
+export function DiscordBotStatus({ services, token, channelId }: DiscordBotStatusProps) {
   const [botEnabled, setBotEnabled] = useState<boolean>(false);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [responseTime, setResponseTime] = useState<number | null>(null);
@@ -61,6 +62,8 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
   const [cpuUsage, setCpuUsage] = useState<number>(0);
   const { toast } = useToast();
   const { user } = useAuth();
+  const [token, setToken] = useState<string | null>(null);
+  const [statusChannelId, setStatusChannelId] = useState<string | null>(null);
 
   const loadBotStatus = async () => {
     setIsChecking(true);
@@ -198,7 +201,15 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
     }
   }, [user]);
 
-  // Setup and cleanup intervals and subscriptions
+  useEffect(() => {
+    if (token) {
+      setToken(token);
+    }
+    if (channelId) {
+      setStatusChannelId(channelId);
+    }
+  }, [token, channelId]);
+
   useEffect(() => {
     loadBotStatus();
     checkSystemStatus();
@@ -397,7 +408,6 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
     }
   };
 
-  // Manual refresh button handler
   const handleManualRefresh = () => {
     loadBotStatus();
     checkSystemStatus();
@@ -679,7 +689,6 @@ export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
         </Badge>
       </CardFooter>
       
-      {/* Dialog für benutzerdefinierte Ankündigungen */}
       <Dialog open={showAnnouncementDialog} onOpenChange={setShowAnnouncementDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>

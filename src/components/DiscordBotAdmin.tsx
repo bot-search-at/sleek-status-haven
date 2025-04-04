@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,6 +30,7 @@ interface Command {
   name: string;
   description: string;
   is_slash_command?: boolean;
+  index?: number; // Added index property to fix type errors
 }
 
 interface DiscordBotConfig {
@@ -242,7 +242,7 @@ export function DiscordBotAdmin() {
       is_slash_command: commandIsSlash,
     };
 
-    if (editingCommand) {
+    if (editingCommand && editingCommand.index !== undefined) {
       const newCommands = [...commands];
       newCommands[editingCommand.index] = newCommand;
       setCommands(newCommands);
@@ -282,7 +282,7 @@ export function DiscordBotAdmin() {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <h3 className="text-lg font-medium">Bot Status</h3>
-            <DiscordBotStatus token={token} channelId={statusChannelId} />
+            <DiscordBotStatus services={[]} />
           </div>
 
           <div className="space-y-2">
