@@ -29,43 +29,31 @@ export type Database = {
       }
       discord_bot_config: {
         Row: {
-          color_scheme: string | null
-          commands: Json | null
           created_at: string | null
-          design_theme: string | null
           enabled: boolean | null
           guild_ids: string[] | null
           id: number
           status_channel_id: string
           token: string
           updated_at: string | null
-          use_slash_commands: boolean | null
         }
         Insert: {
-          color_scheme?: string | null
-          commands?: Json | null
           created_at?: string | null
-          design_theme?: string | null
           enabled?: boolean | null
           guild_ids?: string[] | null
           id: number
           status_channel_id: string
           token: string
           updated_at?: string | null
-          use_slash_commands?: boolean | null
         }
         Update: {
-          color_scheme?: string | null
-          commands?: Json | null
           created_at?: string | null
-          design_theme?: string | null
           enabled?: boolean | null
           guild_ids?: string[] | null
           id?: number
           status_channel_id?: string
           token?: string
           updated_at?: string | null
-          use_slash_commands?: boolean | null
         }
         Relationships: []
       }

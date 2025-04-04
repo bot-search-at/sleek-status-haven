@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -21,8 +22,6 @@ import { Link } from "react-router-dom";
 
 interface DiscordBotStatusProps {
   services: Service[];
-  tokenProp?: string;
-  channelIdProp?: string;
 }
 
 // Funktion definieren, bevor sie benutzt wird
@@ -36,7 +35,7 @@ const getSystemStatus = (services: Service[]) => {
   }
 };
 
-export function DiscordBotStatus({ services, tokenProp, channelIdProp }: DiscordBotStatusProps) {
+export function DiscordBotStatus({ services }: DiscordBotStatusProps) {
   const [botEnabled, setBotEnabled] = useState<boolean>(false);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [responseTime, setResponseTime] = useState<number | null>(null);
@@ -62,8 +61,6 @@ export function DiscordBotStatus({ services, tokenProp, channelIdProp }: Discord
   const [cpuUsage, setCpuUsage] = useState<number>(0);
   const { toast } = useToast();
   const { user } = useAuth();
-  const [token, setToken] = useState<string | null>(null);
-  const [statusChannelId, setStatusChannelId] = useState<string | null>(null);
 
   const loadBotStatus = async () => {
     setIsChecking(true);
@@ -152,7 +149,7 @@ export function DiscordBotStatus({ services, tokenProp, channelIdProp }: Discord
         console.log("System status check response:", data);
         setLastSystemCheck(new Date());
         
-        if (data?.statusChanged) {
+        if (data.statusChanged) {
           toast({
             title: "Systemstatus hat sich geändert",
             description: `Status ist jetzt: ${
@@ -201,15 +198,7 @@ export function DiscordBotStatus({ services, tokenProp, channelIdProp }: Discord
     }
   }, [user]);
 
-  useEffect(() => {
-    if (tokenProp) {
-      setToken(tokenProp);
-    }
-    if (channelIdProp) {
-      setStatusChannelId(channelIdProp);
-    }
-  }, [tokenProp, channelIdProp]);
-
+  // Setup and cleanup intervals and subscriptions
   useEffect(() => {
     loadBotStatus();
     checkSystemStatus();
@@ -408,6 +397,7 @@ export function DiscordBotStatus({ services, tokenProp, channelIdProp }: Discord
     }
   };
 
+  // Manual refresh button handler
   const handleManualRefresh = () => {
     loadBotStatus();
     checkSystemStatus();
@@ -689,6 +679,7 @@ export function DiscordBotStatus({ services, tokenProp, channelIdProp }: Discord
         </Badge>
       </CardFooter>
       
+      {/* Dialog für benutzerdefinierte Ankündigungen */}
       <Dialog open={showAnnouncementDialog} onOpenChange={setShowAnnouncementDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
