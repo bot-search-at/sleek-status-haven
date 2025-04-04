@@ -609,11 +609,11 @@ serve(async (req) => {
 
       // Status emojis for text
       const statusEmojis: Record<string, string> = {
-        operational: "<:green:1356281396007670025>",
-        degraded: "<:reed:1356281418682077234>",
-        partial_outage: "<:reed:1356281418682077234>",
-        major_outage: "<:reed:1356281418682077234>",
-        maintenance: "<:blue:1356281439053807908>"
+        operational: "<:green:1357773251350368418>",
+        degraded: "<:rot:1357773275610222836>",
+        partial_outage: "<:rot:1357773275610222836>",
+        major_outage: "<:rot:1357773275610222836>",
+        maintenance: "<:blau:1357773299244859652>"
       };
 
       // Group services by their group
@@ -695,7 +695,7 @@ serve(async (req) => {
           body: JSON.stringify({ 
             status: 'dnd',
             custom_status: {
-              text: "Bot Search_AT",
+              text: "Austria Crew ",
               emoji_name: "🤖"
             }
           }),
