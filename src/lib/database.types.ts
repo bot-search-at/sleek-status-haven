@@ -175,6 +175,9 @@ export interface Database extends SupabaseDatabase {
           enabled: boolean | null;
           created_at: string | null;
           updated_at: string | null;
+          design_theme: 'default' | 'minimal' | 'compact' | 'modern'; // Add this field
+          color_scheme: 'standard' | 'dark' | 'light' | 'custom'; // Add this field
+          commands: Array<{name: string, description: string}>; // Add this field
         };
         Insert: {
           id: number; // Changed from optional to required to match Supabase types
@@ -184,6 +187,9 @@ export interface Database extends SupabaseDatabase {
           enabled?: boolean | null;
           created_at?: string | null;
           updated_at?: string | null;
+          design_theme?: 'default' | 'minimal' | 'compact' | 'modern'; // Add this field
+          color_scheme?: 'standard' | 'dark' | 'light' | 'custom'; // Add this field
+          commands?: Array<{name: string, description: string}>; // Add this field
         };
         Update: {
           id?: number;
@@ -193,6 +199,9 @@ export interface Database extends SupabaseDatabase {
           enabled?: boolean | null;
           created_at?: string | null;
           updated_at?: string | null;
+          design_theme?: 'default' | 'minimal' | 'compact' | 'modern'; // Add this field
+          color_scheme?: 'standard' | 'dark' | 'light' | 'custom'; // Add this field
+          commands?: Array<{name: string, description: string}>; // Add this field
         };
         Relationships: [];
       };
