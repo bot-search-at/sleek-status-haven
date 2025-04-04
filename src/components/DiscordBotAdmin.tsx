@@ -282,7 +282,7 @@ export function DiscordBotAdmin() {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <h3 className="text-lg font-medium">Bot Status</h3>
-            <DiscordBotStatus services={[]} />
+            <DiscordBotStatus services={[]} token={token} channelId={statusChannelId} />
           </div>
 
           <div className="space-y-2">

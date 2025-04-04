@@ -36,7 +36,7 @@ const getSystemStatus = (services: Service[]) => {
   }
 };
 
-export function DiscordBotStatus({ services, token, channelId }: DiscordBotStatusProps) {
+export function DiscordBotStatus({ services, token: propToken, channelId: propChannelId }: DiscordBotStatusProps) {
   const [botEnabled, setBotEnabled] = useState<boolean>(false);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [responseTime, setResponseTime] = useState<number | null>(null);
@@ -62,7 +62,7 @@ export function DiscordBotStatus({ services, token, channelId }: DiscordBotStatu
   const [cpuUsage, setCpuUsage] = useState<number>(0);
   const { toast } = useToast();
   const { user } = useAuth();
-  const [token, setToken] = useState<string | null>(null);
+  const [botToken, setBotToken] = useState<string | null>(null);
   const [statusChannelId, setStatusChannelId] = useState<string | null>(null);
 
   const loadBotStatus = async () => {
@@ -202,13 +202,13 @@ export function DiscordBotStatus({ services, token, channelId }: DiscordBotStatu
   }, [user]);
 
   useEffect(() => {
-    if (token) {
-      setToken(token);
+    if (propToken) {
+      setBotToken(propToken);
     }
-    if (channelId) {
-      setStatusChannelId(channelId);
+    if (propChannelId) {
+      setStatusChannelId(propChannelId);
     }
-  }, [token, channelId]);
+  }, [propToken, propChannelId]);
 
   useEffect(() => {
     loadBotStatus();
