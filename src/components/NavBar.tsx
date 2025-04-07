@@ -60,7 +60,7 @@ export function NavBar() {
               <div className="h-3 w-3 rounded-full bg-primary-foreground animate-pulse" />
             </div>
             <span className="hidden font-bold text-lg sm:inline-block group-hover:text-primary transition-colors">
-              Bot Search_AT Status
+              Your Hoster Status
             </span>
           </Link>
           
