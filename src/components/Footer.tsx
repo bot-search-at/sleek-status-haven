@@ -15,10 +15,10 @@ export function Footer() {
               <div className="h-9 w-9 flex items-center justify-center rounded-full bg-primary">
                 <div className="h-3 w-3 rounded-full bg-primary-foreground animate-pulse"></div>
               </div>
-              <span className="font-bold text-lg">Bot Search_AT Status</span>
+              <span className="font-bold text-lg">Your Hoster Status</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              Echtzeitüberwachung und Statusinformationen für alle Bot Search_AT Dienste und Anwendungen.
+              Echtzeitüberwachung und Statusinformationen für alle Your Hoster Dienste und Anwendungen.
             </p>
             <div className="flex space-x-4 pt-2">
               <a href="#" className="hover:text-primary transition-colors" aria-label="GitHub">
@@ -96,7 +96,7 @@ export function Footer() {
         {/* Copyright */}
         <div className="border-t border-border/40 mt-8 pt-6 flex flex-col sm:flex-row items-center justify-between text-center sm:text-left">
           <p className="text-xs text-muted-foreground">
-            &copy; {currentYear} Bot Search_AT Status. Alle Rechte vorbehalten.
+            &copy; {currentYear} Your Hoster Status. Alle Rechte vorbehalten.
           </p>
           <p className="text-xs text-muted-foreground mt-2 sm:mt-0">
             Erstellt mit <span className="text-primary">♥</span> in Österreich
