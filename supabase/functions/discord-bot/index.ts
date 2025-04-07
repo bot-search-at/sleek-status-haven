@@ -48,11 +48,11 @@ let lastKnownStatus: SystemStatus | null = null;
 let lastEmbedUpdateTime: Date | null = null;
 
 const statusEmojis: Record<string, string> = {
-  operational: "<:green:1357773251350368418>",
-  degraded: "<:rot:1357773275610222836>",
-  partial_outage: "<:rot:1357773275610222836>",
-  major_outage: "<:rot:1357773275610222836>",
-  maintenance: "<:blau:1357773299244859652>"
+  operational: "<:gruen:1358819242249555998>",
+  degraded: "<:rot:1358819274591965196>",
+  partial_outage: "<:rot:1358819274591965196>",
+  major_outage: "<:rot:1358819274591965196>",
+  maintenance: "<:blau:1358819302148669658>"
 };
 
 serve(async (req) => {
@@ -609,11 +609,11 @@ serve(async (req) => {
 
       // Status emojis for text
       const statusEmojis: Record<string, string> = {
-        operational: "<:green:1357773251350368418>",
-        degraded: "<:rot:1357773275610222836>",
-        partial_outage: "<:rot:1357773275610222836>",
-        major_outage: "<:rot:1357773275610222836>",
-        maintenance: "<:blau:1357773299244859652>"
+        operational: "<:gruen:1358819242249555998>",
+        degraded: "<:rot:1358819274591965196>",
+        partial_outage: "<:rot:1358819274591965196>",
+        major_outage: "<:rot:1358819274591965196>",
+        maintenance: "<:blau:1358819302148669658>"
       };
 
       // Group services by their group
