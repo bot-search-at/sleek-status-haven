@@ -521,7 +521,7 @@ serve(async (req) => {
           body: JSON.stringify({ 
             status: 'dnd',
             custom_status: {
-              text: "Bot Search_AT",
+              text: "Your Hoster",
               emoji_name: "🤖"
             }
           }),
@@ -695,7 +695,7 @@ serve(async (req) => {
           body: JSON.stringify({ 
             status: 'dnd',
             custom_status: {
-              text: "Austria Crew ",
+              text: "Your Hoster",
               emoji_name: "🤖"
             }
           }),
