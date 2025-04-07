@@ -220,7 +220,7 @@ export default function Index() {
             {getStatusIcon()}
             <span className="font-medium">{getStatusMessage()}</span>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">Bot Search_AT Statusseite</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Your Hoster Statusseite</h1>
           <p className="mt-2 text-muted-foreground">
             Live-Statusüberwachung für alle meine Dienste
           </p>
