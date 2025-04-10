@@ -48,11 +48,11 @@ let lastKnownStatus: SystemStatus | null = null;
 let lastEmbedUpdateTime: Date | null = null;
 
 const statusEmojis: Record<string, string> = {
-  operational: "<:gruen:1358819242249555998>",
-  degraded: "<:rot:1358819274591965196>",
-  partial_outage: "<:rot:1358819274591965196>",
-  major_outage: "<:rot:1358819274591965196>",
-  maintenance: "<:blau:1358819302148669658>"
+  operational: ":gruen:",
+  degraded: ":rot:",
+  partial_outage: ":rot:",
+  major_outage: ":rot:",
+  maintenance: ":blau:"
 };
 
 serve(async (req) => {
@@ -609,11 +609,11 @@ serve(async (req) => {
 
       // Status emojis for text
       const statusEmojis: Record<string, string> = {
-        operational: "<:gruen:1358819242249555998>",
-        degraded: "<:rot:1358819274591965196>",
-        partial_outage: "<:rot:1358819274591965196>",
-        major_outage: "<:rot:1358819274591965196>",
-        maintenance: "<:blau:1358819302148669658>"
+        operational: ":gruen:",
+        degraded: ":rot:",
+        partial_outage: ":rot:",
+        major_outage: ":rot:",
+        maintenance: ":blau:"
       };
 
       // Group services by their group
@@ -696,7 +696,7 @@ serve(async (req) => {
             status: 'dnd',
             custom_status: {
               text: "Your Hoster",
-              emoji_name: "🤖"
+              emoji_name: ":Server:"
             }
           }),
         });
